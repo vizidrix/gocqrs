@@ -7,6 +7,8 @@ import (
 	"log"
 )
 
+func ignore() { log.Println("") }
+
 type Person struct {
 	cqrs.Aggregate
 	FirstName string `datastore:",noindex"`
@@ -15,11 +17,17 @@ type Person struct {
 	Profile   string `datastore:",noindex"`
 }
 
-type RegisterPerson struct { // Command
+type RegisterPerson struct {
+	cqrs.Command
 	FirstName string `datastore:",noindex"`
 	LastName  string `datastore:",noindex"`
 	SSN       int64  `datastore:",noindex"`
 	Profile   string `datastore:",noindex"`
+}
+
+type UpdateProfile struct {
+	cqrs.Command
+	Profile string `datastore:",noindex"`
 }
 
 type PersonRegistered struct {
@@ -52,6 +60,23 @@ func NewPerson(id int64, firstName string, lastName string, ssn int64, profile s
 	}
 }
 
+func NewRegisterPerson(id int64, version int64, firstName string, lastName string, ssn int64, profile string) *RegisterPerson {
+	return &RegisterPerson{
+		Command:   cqrs.NewCommand(id, version),
+		FirstName: firstName,
+		LastName:  lastName,
+		SSN:       ssn,
+		Profile:   profile,
+	}
+}
+
+func NewUpdateProfile(id int64, version int64, profile string) *UpdateProfile {
+	return &UpdateProfile{
+		Command: cqrs.NewCommand(id, version),
+		Profile: profile,
+	}
+}
+
 func NewPersonRegistered(id int64, version int64, firstName string, lastName string, ssn int64, profile string) *PersonRegistered {
 	return &PersonRegistered{
 		Event:     cqrs.NewEvent(id, version),
@@ -69,12 +94,33 @@ func NewProfileUpdated(id int64, version int64, profile string) *ProfileUpdated 
 	}
 }
 
-func LoadPersonSync(eventChan <-chan cqrs.IEvent) (person *Person, err error) {
+func LoadPerson(aggregate interface{}, eventChan <-chan cqrs.IEvent) (result interface{}, err error) {
+	var person *Person
+	// A nill means we're loading from baseline, otherwise we're appending events
+	if aggregate != nil {
+		person = aggregate.(*Person)
+	}
 	for e := range eventChan {
 		if e == nil {
 			err = errors.New("Invalid event on channel")
 			return
 		}
+		// Validate aggregate version
+		version := e.(cqrs.IHasVersion).GetVersion()
+		if person == nil {
+			// New aggregate must have a version of 1
+			if version != int64(1) {
+				err = errors.New(fmt.Sprintf("Event version should be 1 but was %s", version))
+				return
+			}
+		} else {
+			// Existing aggregate must have an incremented version
+			if version != person.GetVersion()+1 {
+				err = errors.New(fmt.Sprintf("Event version should be %s but was %s", person.GetVersion(), (e).(cqrs.IHasVersion).GetVersion()))
+				return
+			}
+		}
+		// For each event in the channel get it's type and apply it to the aggregate
 		switch event := (e).(type) {
 		default:
 			{
@@ -83,48 +129,19 @@ func LoadPersonSync(eventChan <-chan cqrs.IEvent) (person *Person, err error) {
 			}
 		case *PersonRegistered:
 			{
-				log.Printf("Received PersonRegistered: %s", event)
+				if person != nil {
+					err = errors.New("Cannot register person with conflicting id")
+					return
+				}
 				person = NewPerson(event.GetId(), event.FirstName, event.LastName, event.SSN, event.Profile)
 			}
 		case *ProfileUpdated:
 			{
-				log.Printf("Received ProfileUpdated: %s", event)
 				person.Profile = event.Profile
 			}
 		}
 		person.IncrementVersion()
 	}
+	result = person
 	return
 }
-
-func LoadPerson(eventChan <-chan *cqrs.IEvent) (<-chan *Person, <-chan error) {
-	result := make(chan *Person)
-	err := make(chan error)
-	go func() {
-		var person *Person
-		defer func() {
-			if person == nil {
-				return
-			}
-			result <- person
-		}()
-		select {
-		case e := <-eventChan:
-			{
-				if e == nil {
-					return
-				}
-				switch event := (*e).(type) {
-				case PersonRegistered:
-					{
-						person = NewPerson(event.GetId(), event.FirstName, event.LastName, event.SSN, event.Profile)
-					}
-				}
-				person.IncrementVersion()
-			}
-		}
-	}()
-	return result, err
-}
-
-//func PersonLoader_Handle_PersonRegistered(*Person person, )

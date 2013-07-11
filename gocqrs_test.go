@@ -1,16 +1,15 @@
 package gocqrs_test
 
 import (
-	cqrs "github.com/vizidrix/gocqrs"
+	//cqrs "github.com/vizidrix/gocqrs"
 	example "github.com/vizidrix/gocqrs/example"
+	. "github.com/vizidrix/gocqrs/test_utils"
 	"log"
 	"testing"
 	//"time"
 )
 
-func ignore() {
-	log.Println("")
-}
+func ignore() { log.Println("") }
 
 // Publish Command
 // - Store Command
@@ -21,108 +20,124 @@ func ignore() {
 // Event Handler(s)
 // - Update View(s)
 
-func Test_Should_load_aggregate_from_event_channel_sync_when_channel_closes_immediately(t *testing.T) {
-	// Arrange
-	eventChannel := make(chan cqrs.IEvent)
-	close(eventChannel)
+func Test_Should_return_nil_if_no_events_found(t *testing.T) {
+	aggregate := AggregateTest(t).Given(example.LoadPerson).With().When().ThenFailOnError()
 
-	// Act
-	if person, err := example.LoadPersonSync(eventChannel); err != nil {
-		log.Printf("Error: %s", err)
+	person := (<-aggregate).(*example.Person)
+
+	if person != nil {
 		t.Fail()
-	} else {
-		log.Printf("Person: %s", person)
-		if person != nil {
-			t.Fail()
-		}
+	}
+}
+
+func Test_Should_load_registered_person(t *testing.T) {
+	aggregate := AggregateTest(t).Given(example.LoadPerson).With().When(
+		example.NewPersonRegistered(1, 1, "John", "Wayne", 987654321, "First"),
+	).ThenFailOnError()
+
+	person := (<-aggregate).(*example.Person)
+
+	if person.Profile != "First" {
+		log.Printf("Profile not set: %s", person.Profile)
+		t.Fail()
+	}
+	if person.Aggregate.GetVersion() != 1 {
+		log.Printf("Version not updated: %s", person.Aggregate.GetVersion())
+		t.Fail()
+	}
+}
+
+func Test_Should_update_profile_when_NewProfileUpdated_event_received(t *testing.T) {
+	aggregate := AggregateTest(t).Given(example.LoadPerson).With(
+		example.NewPersonRegistered(1, 1, "John", "Wayne", 987654321, "First"),
+	).When(
+		example.NewProfileUpdated(1, 2, "Stuff"),
+	).ThenFailOnError()
+
+	person := (<-aggregate).(*example.Person)
+
+	if person.Profile != "Stuff" {
+		log.Printf("Profile not updated: %s", person.Profile)
+		t.Fail()
+	}
+	if person.Aggregate.GetVersion() != 2 {
+		log.Printf("Version not updated: %s", person.Aggregate.GetVersion())
+		t.Fail()
 	}
 }
 
 func Test_Should_return_err_if_nil_is_sent(t *testing.T) {
-	// Arrange
-	eventChannel := make(chan cqrs.IEvent, 1)
-	eventChannel <- nil
-	close(eventChannel)
+	result, err := AggregateTest(t).Given(example.LoadPerson).With(
+		example.NewPersonRegistered(1, 1, "John", "Wayne", 987654321, "First"),
+	).When(
+		nil,
+	).Then()
 
-	// Act
-	if person, err := example.LoadPersonSync(eventChannel); err == nil {
-		log.Printf("Should have returned err: %s, %s", person, err)
-		t.Fail()
-	}
-}
-
-func Test_Should_load_aggregate_from_event_channel(t *testing.T) {
-	// Arrange
-	version := int64(1)
-	eventChannel := make(chan cqrs.IEvent, 1)
-	eventChannel <- example.NewPersonRegistered(1, version, "John", "Wayne", 987654321, "")
-	close(eventChannel)
-
-	// Act
-	if person, err := example.LoadPersonSync(eventChannel); err != nil {
-		log.Printf("Error: %s", err)
-		t.Fail()
-	} else {
-		log.Printf("Person: %s", person)
-		if person == nil {
+	select {
+	case p := <-result:
+		{
+			log.Printf("Should have sent error due to nil on event channel", p)
 			t.Fail()
 		}
-		if person.Aggregate.GetVersion() != 1 {
-			log.Printf("Version not updated: %s", person.Aggregate.GetVersion())
-			t.Fail()
+	case <-err:
+		{
 		}
 	}
 }
 
-func Test_Should_update_profile(t *testing.T) {
-	// Arrange
-	version := int64(1)
-	eventChannel := make(chan cqrs.IEvent, 2)
-	eventChannel <- example.NewPersonRegistered(1, version, "John", "Wayne", 987654321, "")
-	version++
-	eventChannel <- example.NewProfileUpdated(1, version, "Stuff")
-	close(eventChannel)
+func Test_Should_return_err_if_PersonRegistered_twice(t *testing.T) {
+	result, err := AggregateTest(t).Given(example.LoadPerson).With(
+		example.NewPersonRegistered(1, 1, "John", "Wayne", 987654321, "First"),
+	).When(
+		example.NewPersonRegistered(1, 1, "Jack", "Johnson", 987654321, "JJ"),
+	).Then()
 
-	// Act
-	if person, err := example.LoadPersonSync(eventChannel); err != nil {
-		log.Printf("Error: %s", err)
-		t.Fail()
-	} else {
-		log.Printf("Person: %s", person)
-		if person == nil {
+	select {
+	case p := <-result:
+		{
+			log.Printf("Should have sent error due to nil on event channel", p)
 			t.Fail()
 		}
-		if person.Profile != "Stuff" {
-			log.Printf("Profile not updated: %s", person.Profile)
-			t.Fail()
-		}
-		if person.Aggregate.GetVersion() != 2 {
-			log.Printf("Version not updated: %s", person.Aggregate.GetVersion())
-			t.Fail()
+	case <-err:
+		{
 		}
 	}
 }
 
-func Test_Given_an_empty_memory_event_store(t *testing.T) {
-	t.Skipf("Skipping", "because")
-	// Arrange
-	//commands := GetCommandPublisher()
-	//eventStore := cqrs.NewMemoryEventStore()
+func Test_Should_return_err_if_first_event_version_out_of_sync(t *testing.T) {
+	result, err := AggregateTest(t).Given(example.LoadPerson).With().When(
+		example.NewPersonRegistered(1, 2, "Jack", "Johnson", 987654321, "JJ"),
+	).Then()
 
-	//eventSet := eventStore.Of("Person").WithId(1)
+	select {
+	case p := <-result:
+		{
+			log.Printf("Should have sent error due to event version being wrong", p)
+			t.Fail()
+		}
+	case <-err:
+		{
+		}
+	}
+}
 
-	// Act
-	//count := <-eventSet.Count()
+func Test_Should_return_err_if_new_event_version_out_of_sync(t *testing.T) {
+	result, err := AggregateTest(t).Given(example.LoadPerson).With(
+		example.NewPersonRegistered(1, 1, "John", "Wayne", 987654321, "First"),
+		example.NewProfileUpdated(1, 2, "Stuff"),
+		example.NewProfileUpdated(1, 3, "Stuff"),
+	).When(
+		example.NewProfileUpdated(1, 3, "Stuff"),
+	).Then()
 
-	//for event := range eventSet.All() {
-
-	// Assert
-	//if count != 0 {
-	//	t.Fail()
-	//}
-
-	//log.Printf("Aggregate Store: %s", aggregateStore)
-	//log.Printf("Event Set: %s", eventSet)
-	// Act
-	//t.Fail()
+	select {
+	case p := <-result:
+		{
+			log.Printf("Should have sent error due to event version being wrong", p)
+			t.Fail()
+		}
+	case <-err:
+		{
+		}
+	}
 }

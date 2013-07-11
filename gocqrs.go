@@ -5,6 +5,8 @@ import (
 	"log"
 )
 
+func ignore() { log.Println("") }
+
 type IHasKind interface {
 	GetKind() string
 }
@@ -48,7 +50,6 @@ func (aggregate *Aggregate) GetVersion() int64 {
 }
 
 func (aggregate *Aggregate) IncrementVersion() {
-	log.Printf("Increment version: %s [%s]", aggregate, aggregate.version)
 	aggregate.version++
 }
 
@@ -96,6 +97,7 @@ func (event *Event) GetVersion() int64 {
 	return event.version
 }
 
+type AggregateLoader func(interface{}, <-chan IEvent) (interface{}, error)
 type EventHandler func(IEvent)
 type CommandHandler func(commandSub <-chan ICommand, eventPub chan<- IEvent) chan error
 
