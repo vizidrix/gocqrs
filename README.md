@@ -63,7 +63,8 @@ https://github.com/Vizidrix/gocqrs/blob/master/LICENSE
 
 ----
 ## Edited
-* 11-July-2013	initial release
+* 07-January-2014	modified license to MIT
+* 11-July-2013		initial release
 
 ----
 ## Credits
