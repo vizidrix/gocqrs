@@ -2,174 +2,74 @@ package gocqrs
 
 import (
 	//"errors"
-	"log"
+	//"log"
 )
 
-func ignore() { log.Println("") }
-
-type IHasKind interface {
-	GetKind() string
-}
-
-type IHasId interface {
-	GetId() int64
-}
-
-type IHasVersion interface {
-	GetVersion() int64
-}
-
-type Aggregate struct {
-	kind    string `datastore:",noindex" json:"kind"`
-	id      int64  `datastore:",noindex" json:"id"`
-	version int64  `json:"version"`
-}
-
-type IAggregate interface {
-	IncrementVersion()
-}
-
-func NewAggregate(kind string, id int64) Aggregate {
-	return Aggregate{
-		kind:    kind,
-		id:      id,
-		version: 0,
-	}
-}
-
-func (aggregate *Aggregate) GetKind() string {
-	return aggregate.kind
-}
-
-func (aggregate *Aggregate) GetId() int64 {
-	return aggregate.id
-}
-
-func (aggregate *Aggregate) GetVersion() int64 {
-	return aggregate.version
-}
-
-func (aggregate *Aggregate) IncrementVersion() {
-	aggregate.version++
-}
+//func ignore() { log.Println("") }
 
 type Command struct {
-	id      int64 `datastore:",noindex" json:"id"`
-	version int64 `json:"version"`
+	//Id int64 `json:"_id"`
+	Type int64 `json:"__type"`
+	//Version int64 `json:"__version"`
+	
 }
-
-type ICommand interface{}
-
-func NewCommand(id int64, version int64) Command {
-	return Command{
-		id:      id,
-		version: version,
-	}
-}
-
-func (command *Command) GetId() int64 {
-	return command.id
-}
-
-func (command *Command) GetVersion() int64 {
-	return command.version
-}
-
-type Event struct {
-	id      int64 `datastore:",noindex" json:"id"`
-	version int64 `json:"version"`
-}
-
-type IEvent interface{}
-
-func NewEvent(id int64, version int64) Event {
-	return Event{
-		id:      id,
-		version: version,
-	}
-}
-
-func (event *Event) GetId() int64 {
-	return event.id
-}
-
-func (event *Event) GetVersion() int64 {
-	return event.version
-}
-
-type AggregateLoader func(interface{}, <-chan IEvent) (interface{}, error)
-type EventHandler func(IEvent)
-type CommandHandler func(commandSub <-chan ICommand, eventPub chan<- IEvent) chan error
 
 /*
-type IEventStore interface {
-	func GetEvents(kind string, id int64) <-chan IEvent
-}
-*/
-/*
-// Given an aggregate kind this func returns a writer for all related events
-type EventWriteStore func(kind string)
-
-// Given an event this func puts the event in the appropriate store
-type EventWriter func(event *Event) error
-
-// Given an aggregate kind this func returns a retreiver for all related events
-type EventReadStore func(kind string) EventSource
-
-// Given an id and optional min version this func produces a read chan of events
-type EventSource func(id int64, version int) <-chan *Event
-
-type AggregateKind struct {
-	Kind string
+func ExtractCommand(data string) *Command {
+	command := &Command{}
+	return json.DeMarshal(data, &command)
+	
+	return &Command {
+		Id: 10,
+		Version: 1,
+		Type: 64,
+	}
 }
 
-type AggregateStore struct {
-	aggregateKeyMap map[int64]*EventSet
-}
+// Below this line should go into a different library
+package gocqrsauth
 
-type EventSet struct {
-	events []*Event
-}
+type Commands int64
 
-type AggregateKindMapper interface {
-	Of(kind string) AggregateIdMapper
-}
+const (
+	_ Commands = 0x00000000
+	AuthenticateUser = 0x0000001
+	TerminateSession = 0x0000002
+)
 
-type AggregateIdMapper interface {
-	WithId(id int64) EventSet
-}
+func Handle(data string) {
+	cmd := cqrs.ExtractCommand(data)
+	switch cmd.Type {
+		case Commands.AuthenticateUser: {
 
-//func (eventStore *MemoryEventStore) Of(kind string) *AggregateStore {
-func (eventStore *MemoryEventStore) Of(kind string) AggregateKindMapper {
-	// Do a quick check to ensure that the inner map exsits
-	if _, ok := eventStore.aggregateKindMap[kind]; !ok {
-		eventStore.aggregateKindMap[kind] = &AggregateStore{
-			aggregateKeyMap: make(map[int64]*EventSet),
 		}
 	}
-	return eventStore.aggregateKindMap[kind]
-	/
-		return func(id int64) EventWriter {
-			if _, ok :=
-			return func(event *Event) error {
-				if aggregateMap, ok := eventStore[kind]; ok {
-
-				} else {
-					return errors.New("text")
-				}
-			}
-			return nil
-		}
-	/
-	//return func(event *Event) error {
 }
 
-func (aggregateStore *AggregateStore) WithId(id int64) *EventSet {
-	if _, ok := aggregateStore.aggregateKeyMap[id]; !ok {
-		aggregateStore.aggregateKeyMap[id] = &EventSet{
-			events: make([]*Event, 1),
-		}
-	}
-	return aggregateStore.aggregateKeyMap[id]
+type RegisterPersonCommand struct {
+	cqrs.Command
+	FirstName string
+	LastName string
 }
+
+// Somewhere in yet another package
+
+package coolbeans
+
+import(
+	auth "github.com/vizidrix/gocqrsauth"
+)
+
+func Main() {
+	fmt.Printf("Auth command id: %s", auth.Commands.AuthenticateUser)
+	correlationToken, err := cqrs.CommandBus.Send(&RegisterPersonCommand {
+		Command.Id: 10,
+		Command.Version: 0,
+		Command.Type: auth.Commands.RegisterPersonCommand,
+		FirstName: "Perry",
+		LastName: "Birch",
+		})
+
+}
+
 */
