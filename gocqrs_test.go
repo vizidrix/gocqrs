@@ -1,8 +1,9 @@
 package gocqrs_test
 
 import (
-	cqrs "github.com/vizidrix/gocqrs"
+	"github.com/vizidrix/gocqrs/cqrs"
 	//example "github.com/vizidrix/gocqrs/example"
+	"github.com/vizidrix/gocqrs/test/domain1"
 	//. "github.com/vizidrix/gocqrs/test_utils"
 	//"log"
 	"testing"
@@ -12,92 +13,39 @@ import (
 	"encoding/json"
 )
 
-var CQRS_DOMAIN int32 = 1
-
-/*
+/* 
 func init() {
 	CQRS_DOMAIN = 10
 }
 */
-
-const (
-	_ = 0 + iota
-	DoSomething
-	DoAnotherThing
-)
 
 func HandleJson(data []byte) error {
 	cmd := &cqrs.Command{}
 	if err := json.Unmarshal(data, cmd); err != nil {
 		return err
 	}
-	// CHeck Command Domain
-	if cmd.CommandDomain == CQRS_DOMAIN {
-		switch cmd.CommandType {
-			case DoSomething: {
-				_cmd := &DoSomethingCommand{}
-				if err := json.Unmarshal(data, _cmd); err != nil {
-					return err
+	switch cmd.CommandDomain {
+		case domain1.DOMAIN: {
+			switch cmd.CommandType {
+				case domain1.DoSomething: {
+					_cmd := &domain1.DoSomethingCommand{}
+					if err := json.Unmarshal(data, _cmd); err != nil {
+						return err
+					}
+					domain1.HandleDoSomethingCommand(_cmd)
 				}
-				HandleDoSomethingCommand(_cmd)
-			}
-			case DoAnotherThing: {
-				_cmd := &DoAnotherThingCommand{}
-				if err := json.Unmarshal(data, _cmd); err != nil {
-					return err
+				case domain1.DoAnotherThing: {
+					_cmd := &domain1.DoAnotherThingCommand{}
+					if err := json.Unmarshal(data, _cmd); err != nil {
+						return err
+					}
+					domain1.HandleDoAnotherThingCommand(_cmd)
 				}
-				HandleDoAnotherThingCommand(_cmd)
 			}
+			return nil
 		}
-		return nil
 	}
 	return errors.New("Invalid command received")
-}
-
-type DoSomethingCommand struct {
-	cqrs.Command
-	StringValue string `json:"stringalue"`
-	IntValue int64 `json:"intvalue"`
-}
-
-func NewDoSomethingCommand(stringValue string, intValue int64) *DoSomethingCommand {
-	return &DoSomethingCommand {
-		//cqrs.Command { Domain: 1, Type: 1 },
-		cqrs.NewCommand(CQRS_DOMAIN, DoSomething, 0),
-		stringValue,
-		intValue,
-	}
-}
-
-func HandleDoSomethingCommand(cmd *DoSomethingCommand) {
-	if cmd.StringValue == "" {
-		fmt.Printf("Empty Something\n")
-	} else {
-		fmt.Printf("Got Something: [ %s ]\n", cmd.StringValue)
-	}
-}
-
-type DoAnotherThingCommand struct {
-	cqrs.Command
-	StringValue string `json:"stringvalue"`
-	IntValue int64 `json:"intvalue"`
-}
-
-func NewDoAnotherThingCommand(stringValue string, intValue int64) *DoAnotherThingCommand {
-	return &DoAnotherThingCommand {
-		cqrs.NewCommand(CQRS_DOMAIN, DoAnotherThing, 0),
-		//cqrs.Command { Domain: 1, Type: 2 },
-		stringValue,
-		intValue,
-	}
-}
-
-func HandleDoAnotherThingCommand(cmd *DoAnotherThingCommand) {
-	if cmd.StringValue == "" {
-		fmt.Printf("Another empty\n")
-	} else {
-		fmt.Printf("Got Another [ %s ]\n", cmd.StringValue)
-	}
 }
 
 func Test_Should_create_command(t *testing.T) {
@@ -106,10 +54,10 @@ func Test_Should_create_command(t *testing.T) {
 		"one",
 		1,
 	}*/
-	cmd1 := NewDoSomethingCommand("one", 1)
-	cmd2 := NewDoAnotherThingCommand("two", 2)
-	HandleDoSomethingCommand(cmd1)
-	HandleDoAnotherThingCommand(cmd2)
+	cmd1 := domain1.NewDoSomethingCommand("one")
+	cmd2 := domain1.NewDoAnotherThingCommand(2)
+	domain1.HandleDoSomethingCommand(cmd1)
+	domain1.HandleDoAnotherThingCommand(cmd2)
 	
 	data, err := json.Marshal(cmd1)
 	if err != nil {
@@ -117,7 +65,7 @@ func Test_Should_create_command(t *testing.T) {
 	} else {
 		fmt.Printf("JSON [ %s ]\n", data)
 	}
-	cmd1_ := &DoSomethingCommand{}
+	cmd1_ := &domain1.DoSomethingCommand{}
 	err = json.Unmarshal(data, cmd1_)
 	if err != nil {
 		fmt.Printf("JSON Un Err: [ %s ]\n", err)

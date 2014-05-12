@@ -3,7 +3,7 @@ package gocqrs_example
 import (
 	"errors"
 	"fmt"
-	cqrs "github.com/vizidrix/gocqrs"
+	"github.com/vizidrix/gocqrs/cqrs"
 	"log"
 )
 
@@ -11,48 +11,45 @@ func ignore() { log.Println("") }
 
 type Person struct {
 	cqrs.Aggregate
-	FirstName string `datastore:",noindex"`
-	LastName  string `datastore:",noindex"`
-	SSN       int64  `datastore:",noindex"`
-	Profile   string `datastore:",noindex"`
+	FirstName string `json:"firstname"`
+	LastName  string `json:"lastname"`
+	Profile string `json:"profile"`
 }
 
 type RegisterPerson struct {
 	cqrs.Command
-	FirstName string `datastore:",noindex"`
-	LastName  string `datastore:",noindex"`
-	SSN       int64  `datastore:",noindex"`
-	Profile   string `datastore:",noindex"`
+	FirstName string `json:"firstname"`
+	LastName  string `json:"lastname"`
+	Profile string `json:"profile"`
 }
 
 type UpdateProfile struct {
 	cqrs.Command
-	Profile string `datastore:",noindex"`
+	Profile string `json:"profile"`
 }
 
 type PersonRegistered struct {
 	cqrs.Event
-	FirstName string `datastore:",noindex"`
-	LastName  string `datastore:",noindex"`
-	SSN       int64  `datastore:",noindex"`
-	Profile   string `datastore:",noindex"`
+	FirstName string `json:"firstname"`
+	LastName  string `json:"lastname"`
+	Profile string `json:"profile"`
 }
 
 type ProfileUpdated struct {
 	cqrs.Event
-	Profile string `datastore:",noindex"`
+	Profile string `json:"profile"`
 }
 
 type PersonSummary struct { // View
 	Id        int64  `json:"id"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	FullName  string `json:"full_name"`
+	FirstName string `json:"firstname"`
+	LastName  string `json:"lastname"`
+	FullName  string `json:"fullname"`
 }
 
 func NewPerson(id int64, firstName string, lastName string, ssn int64, profile string) *Person {
 	return &Person{
-		Aggregate: cqrs.NewAggregate("person", id),
+		//Aggregate: cqrs.NewAggregate("person", id),
 		FirstName: firstName,
 		LastName:  lastName,
 		SSN:       ssn,

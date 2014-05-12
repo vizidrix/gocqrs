@@ -4,7 +4,7 @@ import (
 	//"errors"
 	//"log"
 )
-
+/*
 type Command struct {
 	CommandDomain int32 `json:"__domain"`
 	CommandType int32 `json:"__type"`
@@ -29,7 +29,7 @@ func NewVersionedCommand(commandDomain int32, commandType int32, commandId int64
 		CommandVersion: commandVersion,
 	}
 }
-
+*/
 /*
 func ExtractCommand(data string) *Command {
 	command := &Command{}
