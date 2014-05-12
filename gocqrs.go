@@ -5,13 +5,29 @@ import (
 	//"log"
 )
 
-//func ignore() { log.Println("") }
-
 type Command struct {
-	//Id int64 `json:"_id"`
-	Type int64 `json:"__type"`
-	//Version int64 `json:"__version"`
-	
+	CommandDomain int32 `json:"__domain"`
+	CommandType int32 `json:"__type"`
+	CommandId int64 `json:"__id"`
+	CommandVersion int64 `json:"__version"`
+}
+
+func NewCommand(commandDomain int32, commandType int32, commandId int64) Command {
+	return Command {
+		CommandDomain: commandDomain,
+		CommandType: commandType,
+		CommandId: commandId,
+		CommandVersion: 0,
+	}
+}
+
+func NewVersionedCommand(commandDomain int32, commandType int32, commandId int64, commandVersion int64) Command {
+	return Command {
+		CommandDomain: commandDomain,
+		CommandType: commandType,
+		CommandId: commandId,
+		CommandVersion: commandVersion,
+	}
 }
 
 /*

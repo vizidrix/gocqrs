@@ -8,8 +8,22 @@ import (
 	"testing"
 	"fmt"
 	//"time"
-	//"errors"
+	"errors"
 	"encoding/json"
+)
+
+var CQRS_DOMAIN int32 = 1
+
+/*
+func init() {
+	CQRS_DOMAIN = 10
+}
+*/
+
+const (
+	_ = 0 + iota
+	DoSomething
+	DoAnotherThing
 )
 
 func HandleJson(data []byte) error {
@@ -17,23 +31,27 @@ func HandleJson(data []byte) error {
 	if err := json.Unmarshal(data, cmd); err != nil {
 		return err
 	}
-	switch cmd.Type {
-		case 1: {
-			_cmd := &DoSomethingCommand{}
-			if err := json.Unmarshal(data, _cmd); err != nil {
-				return err
+	// CHeck Command Domain
+	if cmd.CommandDomain == CQRS_DOMAIN {
+		switch cmd.CommandType {
+			case DoSomething: {
+				_cmd := &DoSomethingCommand{}
+				if err := json.Unmarshal(data, _cmd); err != nil {
+					return err
+				}
+				HandleDoSomethingCommand(_cmd)
 			}
-			HandleDoSomethingCommand(_cmd)
-		}
-		case 2: {
-			_cmd := &DoAnotherThingCommand{}
-			if err := json.Unmarshal(data, _cmd); err != nil {
-				return err
+			case DoAnotherThing: {
+				_cmd := &DoAnotherThingCommand{}
+				if err := json.Unmarshal(data, _cmd); err != nil {
+					return err
+				}
+				HandleDoAnotherThingCommand(_cmd)
 			}
-			HandleDoAnotherThingCommand(_cmd)
 		}
+		return nil
 	}
-	return nil
+	return errors.New("Invalid command received")
 }
 
 type DoSomethingCommand struct {
@@ -44,7 +62,8 @@ type DoSomethingCommand struct {
 
 func NewDoSomethingCommand(stringValue string, intValue int64) *DoSomethingCommand {
 	return &DoSomethingCommand {
-		cqrs.Command { Type: 1 },
+		//cqrs.Command { Domain: 1, Type: 1 },
+		cqrs.NewCommand(CQRS_DOMAIN, DoSomething, 0),
 		stringValue,
 		intValue,
 	}
@@ -54,7 +73,7 @@ func HandleDoSomethingCommand(cmd *DoSomethingCommand) {
 	if cmd.StringValue == "" {
 		fmt.Printf("Empty Something\n")
 	} else {
-		fmt.Printf("Got something: [ %s ]\n", cmd.StringValue)
+		fmt.Printf("Got Something: [ %s ]\n", cmd.StringValue)
 	}
 }
 
@@ -66,7 +85,8 @@ type DoAnotherThingCommand struct {
 
 func NewDoAnotherThingCommand(stringValue string, intValue int64) *DoAnotherThingCommand {
 	return &DoAnotherThingCommand {
-		cqrs.Command { Type: 2 },
+		cqrs.NewCommand(CQRS_DOMAIN, DoAnotherThing, 0),
+		//cqrs.Command { Domain: 1, Type: 2 },
 		stringValue,
 		intValue,
 	}
