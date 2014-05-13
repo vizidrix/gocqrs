@@ -15,40 +15,46 @@ import (
 	//"encoding/json"
 )
 
-/* 
 func init() {
-	CQRS_DOMAIN = 10
+	web.DOMAIN = 10
 }
-*/
 
-func Test_Should_create_command(t *testing.T) {
+func Test_Should_allow_visitor_ban_without_prior_visit(t *testing.T) {
 	// Given
 	var visitorId int64 = 1
-	var visitorIP int32 = 1
-	var visitorRequest []byte = make([]byte, 0)
-	var eventBus chan interface{} = make(chan interface{})
+	//var visitorIP int32 = 1
+	//var visitorRequest []byte = make([]byte, 0)
+	var expectedEventCount = 1
+	var eventBus chan interface{} = make(chan interface{}, expectedEventCount)
 	var eventStream []interface{} = []interface{}{
-		web.NewVisitorRequestReceived(visitorId, visitorIP, visitorRequest),
+		//web.NewVisitorRequestReceived(visitorId, visitorIP, visitorRequest),
 	}
 	var es cqrs.EventStorer = &cqrs.MemoryEventStore {
 		Data: eventStream,
 	}
-	
-
-	command := web.NewBanVisitorBySystem(visitorId)
+	command := web.NewBanVisitor(visitorId)
 
 	// When
-	web.HandleBanVisitorBySystemCommand(eventBus, es, command)
-
+	web.Handle(eventBus, es, command)
+	
 	// Then
 	select {
 		case event := <-eventBus:
 			fmt.Printf("Event: %v\n", event)
+			switch e := event.(type) {
+				case web.VisitorBanned: {
+					if e.Id != visitorId {
+						t.Errorf("Invalid visitor id [ %s ]\n", e)
+					}
+					return
+				}
+				default: {
+					t.Errorf("Incorrect event received [ %s ]\n", e)
+				}
+			}
 			break
 		default:
-			fmt.Printf("Nothing on the bus\n")
-			t.Fail()
-			break
+			t.Errorf("Nothing on the bus\n")
 	}
 }
 
