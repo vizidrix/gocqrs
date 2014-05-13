@@ -112,6 +112,7 @@ type EventStorer interface {
 }
 
 type MemoryEventStore struct {
+	Snapshot interface{}
 	Data []interface{}
 }
 
