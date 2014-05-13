@@ -2,15 +2,17 @@ package gocqrs_test
 
 import (
 	"github.com/vizidrix/gocqrs/cqrs"
+	"github.com/vizidrix/gocqrs/web"
+
 	//example "github.com/vizidrix/gocqrs/example"
-	"github.com/vizidrix/gocqrs/test/domain1"
+//	"github.com/vizidrix/gocqrs/web"
 	//. "github.com/vizidrix/gocqrs/test_utils"
 	//"log"
 	"testing"
 	"fmt"
 	//"time"
-	"errors"
-	"encoding/json"
+	//"errors"
+	//"encoding/json"
 )
 
 /* 
@@ -19,27 +21,60 @@ func init() {
 }
 */
 
+func Test_Should_create_command(t *testing.T) {
+	// Given
+	var visitorId int64 = 1
+	var visitorIP int32 = 1
+	var visitorRequest []byte = make([]byte, 0)
+	var eventBus chan interface{} = make(chan interface{})
+	var eventStream []interface{} = []interface{}{
+		web.NewVisitorRequestReceived(visitorId, visitorIP, visitorRequest),
+	}
+	var es cqrs.EventStorer = &cqrs.MemoryEventStore {
+		Data: eventStream,
+	}
+	
+
+	command := web.NewBanVisitorBySystem(visitorId)
+
+	// When
+	web.HandleBanVisitorBySystemCommand(eventBus, es, command)
+
+	// Then
+	select {
+		case event := <-eventBus:
+			fmt.Printf("Event: %v\n", event)
+			break
+		default:
+			fmt.Printf("Nothing on the bus\n")
+			t.Fail()
+			break
+	}
+}
+
+
+/*
 func HandleJson(data []byte) error {
 	cmd := &cqrs.Command{}
 	if err := json.Unmarshal(data, cmd); err != nil {
 		return err
 	}
-	switch cmd.CommandDomain {
-		case domain1.DOMAIN: {
+	switch cmd.Domain {
+		case web.DOMAIN: {
 			switch cmd.CommandType {
-				case domain1.DoSomething: {
-					_cmd := &domain1.DoSomethingCommand{}
+				case web.BanVisitor: {
+					_cmd := &BanVisitor{}
 					if err := json.Unmarshal(data, _cmd); err != nil {
 						return err
 					}
-					domain1.HandleDoSomethingCommand(_cmd)
+					HandleDoSomethingCommand(_cmd)
 				}
-				case domain1.DoAnotherThing: {
-					_cmd := &domain1.DoAnotherThingCommand{}
+				case DoAnotherThing: {
+					_cmd := &DoAnotherThingCommand{}
 					if err := json.Unmarshal(data, _cmd); err != nil {
 						return err
 					}
-					domain1.HandleDoAnotherThingCommand(_cmd)
+					HandleDoAnotherThingCommand(_cmd)
 				}
 			}
 			return nil
@@ -48,16 +83,19 @@ func HandleJson(data []byte) error {
 	return errors.New("Invalid command received")
 }
 
-func Test_Should_create_command(t *testing.T) {
+func On_BanVisitorCommand()
+*/
+
 	/*cmd := &TestCommandOneCommand {
 		cqrs.Command { Type: 10 },
 		"one",
 		1,
 	}*/
-	cmd1 := domain1.NewDoSomethingCommand("one")
-	cmd2 := domain1.NewDoAnotherThingCommand(2)
-	domain1.HandleDoSomethingCommand(cmd1)
-	domain1.HandleDoAnotherThingCommand(cmd2)
+	/*
+	cmd1 := NewDoSomethingCommand("one")
+	cmd2 := NewDoAnotherThingCommand(2)
+	HandleDoSomethingCommand(cmd1)
+	HandleDoAnotherThingCommand(cmd2)
 	
 	data, err := json.Marshal(cmd1)
 	if err != nil {
@@ -65,7 +103,7 @@ func Test_Should_create_command(t *testing.T) {
 	} else {
 		fmt.Printf("JSON [ %s ]\n", data)
 	}
-	cmd1_ := &domain1.DoSomethingCommand{}
+	cmd1_ := &DoSomethingCommand{}
 	err = json.Unmarshal(data, cmd1_)
 	if err != nil {
 		fmt.Printf("JSON Un Err: [ %s ]\n", err)
@@ -82,8 +120,7 @@ func Test_Should_create_command(t *testing.T) {
 	fmt.Printf("cmd:\n\t%v\n\t%v\n", cmd1, cmd2)
 
 	HandleJson(data)
-
-}
+	*/
 
 //func ignore() { log.Println("") }
 

@@ -4,10 +4,26 @@ import (
 	"errors"
 	"fmt"
 	"github.com/vizidrix/gocqrs/cqrs"
-	"log"
 )
 
-func ignore() { log.Println("") }
+var DOMAIN int32 = 1
+
+const ( // Aggregates
+	_ = 0 + iota
+	Person
+)
+
+const ( // Commands
+	_ = 0 + iota
+	RegisterPerson
+	UpdateProfile
+)
+
+const ( // Events
+	_ = 0 + iota
+	PersonRegistered
+	ProfileUpdated
+)
 
 type Person struct {
 	cqrs.Aggregate
@@ -47,22 +63,20 @@ type PersonSummary struct { // View
 	FullName  string `json:"fullname"`
 }
 
-func NewPerson(id int64, firstName string, lastName string, ssn int64, profile string) *Person {
+func NewPerson(id int64, firstName string, lastName string, profile string) *Person {
 	return &Person{
-		//Aggregate: cqrs.NewAggregate("person", id),
+		Aggregate: cqrs.NewAggregate(DOMAIN, Person, id),
 		FirstName: firstName,
 		LastName:  lastName,
-		SSN:       ssn,
 		Profile:   profile,
 	}
 }
 
-func NewRegisterPerson(id int64, version int64, firstName string, lastName string, ssn int64, profile string) *RegisterPerson {
+func NewRegisterPerson(id int64, version int64, firstName string, lastName string, profile string) *RegisterPerson {
 	return &RegisterPerson{
 		Command:   cqrs.NewCommand(id, version),
 		FirstName: firstName,
 		LastName:  lastName,
-		SSN:       ssn,
 		Profile:   profile,
 	}
 }
@@ -74,12 +88,11 @@ func NewUpdateProfile(id int64, version int64, profile string) *UpdateProfile {
 	}
 }
 
-func NewPersonRegistered(id int64, version int64, firstName string, lastName string, ssn int64, profile string) *PersonRegistered {
+func NewPersonRegistered(id int64, version int64, firstName string, lastName string, profile string) *PersonRegistered {
 	return &PersonRegistered{
 		Event:     cqrs.NewEvent(id, version),
 		FirstName: firstName,
 		LastName:  lastName,
-		SSN:       ssn,
 		Profile:   profile,
 	}
 }
