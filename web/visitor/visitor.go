@@ -64,16 +64,19 @@ func NewRegister(visitorId uint64, requestingUserId uint64, ipv4Address uint32, 
 	}
 }
 
+func NewRegisterIPV4(visitorId uint64, requestingUserId uint64, ipv4Address uint32) Register {
+	return NewRegister(visitorId, requestingUserId, ipv4Address, [2]uint64 { 0, 0 })
+}
+
 type HandleRequest struct {
 	cqrs.CommandMemento
 	RequestingUserId uint64 `json:"requestinguserid"`
 	Request []byte `json:"request"`
 }
 
-func NewHandleRequest(visitorId uint64, requestingUserId uint64, request []byte) HandleRequest {
+func NewHandleRequest(visitorId uint64, request []byte) HandleRequest {
 	return HandleRequest {
 		CommandMemento: cqrs.NewCommand(DOMAIN, C_HandleRequest, visitorId, -1),
-		RequestingUserId: requestingUserId,
 		Request: request,
 	}
 }
@@ -144,16 +147,14 @@ func NewRegistered(visitorId uint64, requestingUserId uint64, ipv4Address uint32
 
 type RequestHandled struct {
 	cqrs.EventMemento
-	RequestingUserId uint64 `json:"requestinguserid"`
 	IPAddress int32 `json:"ipaddress"`
 	Request []byte `json:"request"`
 }
 
 // TODO: Create id from IP hash
-func NewRequestHandled(visitorId uint64, requestingUserId uint64, request []byte) RequestHandled {
+func NewRequestHandled(visitorId uint64, request []byte) RequestHandled {
 	return RequestHandled {
 		EventMemento: cqrs.NewEvent(DOMAIN, E_RequestHandled, visitorId, -1),
-		RequestingUserId: requestingUserId,
 		Request: request,
 	}
 }
@@ -182,8 +183,41 @@ func NewBlacklistRescinded(visitorId uint64, requestingUserId uint64) BlacklistR
 	}
 }
 
-func Handle(eventBus chan<-interface{}, es cqrs.EventStorer, command cqrs.Command) {
+type Whitelisted struct {
+	cqrs.EventMemento
+	RequestingUserId uint64 `json:"requestinguserid"`
+}
+
+func NewWhitelisted(visitorId uint64, requestingUserId uint64) Whitelisted {
+	return Whitelisted {
+		EventMemento: cqrs.NewEvent(DOMAIN, E_Whitelisted, visitorId, -1),
+		RequestingUserId: requestingUserId,
+	}
+}
+
+type WhitelistRescinded struct {
+	cqrs.EventMemento
+	RequestingUserId uint64 `json:"requestinguserid"`
+}
+
+func NewWhitelistRescinded(visitorId uint64, requestingUserId uint64) WhitelistRescinded {
+	return WhitelistRescinded {
+		EventMemento: cqrs.NewEvent(DOMAIN, E_WhitelistRescinded, visitorId, -1),
+		RequestingUserId: requestingUserId,
+	}
+}
+
+
+func Handle(eventBus chan<-cqrs.Event, es cqrs.EventStorer, command cqrs.Command) {
 	switch cmd := command.(type) {
+		case Register: {
+			fmt.Printf("Trying to register user\n->\t%v\n", command)
+			eventBus <- NewRegistered(cmd.GetId(), cmd.RequestingUserId, cmd.IPV4Address, cmd.IPV6Address)
+		}
+		case HandleRequest: {
+			fmt.Printf("Trying to handle request\n->\t%v\n", command)
+			eventBus <- NewRequestHandled(cmd.GetId(), cmd.Request)
+		}
 		case Blacklist: {
 			fmt.Printf("Trying to ban visitor!\n->\t%v\n", command)
 			// Load aggregate
@@ -211,6 +245,14 @@ func Handle(eventBus chan<-interface{}, es cqrs.EventStorer, command cqrs.Comman
 			// Emit events
 			eventBus <- NewBlacklistRescinded(command.(cqrs.Aggregate).GetId(), cmd.RequestingUserId)
 			// Poof done
+		}
+		case Whitelist: {
+			fmt.Printf("Trying to whitelist visitor\n->\t%v\n", command)
+			eventBus <- NewWhitelisted(cmd.GetId(), cmd.RequestingUserId)
+		}
+		case RescindWhitelist: {
+			fmt.Printf("Trying to rescind whitelist for visitor\n->\t%v\n", command)
+			eventBus <- NewWhitelistRescinded(cmd.GetId(), cmd.RequestingUserId)
 		}
 		default: {
 			fmt.Printf("Visitor was unable to handle command: [ %v ]\n", cmd)

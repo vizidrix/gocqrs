@@ -15,8 +15,8 @@ func Test_Should_not_allow_Blacklist_without_register(t *testing.T) {
 	var visitorId uint64 = 1024
 	//var visitorIP int32 = 1
 	//var visitorRequest []byte = make([]byte, 0)
-	var eventBus chan interface{} = make(chan interface{}, 2)
-	var eventStream []interface{} = []interface{}{
+	var eventBus chan cqrs.Event = make(chan cqrs.Event, 1)
+	var eventStream []cqrs.Event = []cqrs.Event{
 		//web.NewVisitorRequestReceived(visitorId, visitorIP, visitorRequest),
 	}
 	var es cqrs.EventStorer = &cqrs.MemoryEventStore {
@@ -45,5 +45,31 @@ func Test_Should_not_allow_Blacklist_without_register(t *testing.T) {
 			break
 		default:
 			t.Errorf("Nothing on the bus\n")
+	}
+}
+
+func Test_Should_allow_valid_visitor_register(t *testing.T) {
+	var eventBus chan cqrs.Event = make(chan cqrs.Event, 1)
+	
+	// Given
+	es := &cqrs.MemoryEventStore { Data: []cqrs.Event{} }
+
+	// When
+	visitor.Handle(eventBus, es, visitor.NewRegisterIPV4(10, 20, 30))
+	
+	// Then
+	select {
+	case event := <-eventBus:
+		switch e := event.(type) {
+			case visitor.Registered: {
+				return
+			}
+			default: {
+				t.Errorf("Incorrect event received [ %s ]\n", e)
+			}
+		}
+		break
+	default:
+		t.Errorf("Nothing on the bus\n")
 	}
 }

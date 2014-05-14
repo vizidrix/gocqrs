@@ -107,7 +107,7 @@ type EventStorer interface {
 
 type MemoryEventStore struct {
 	Snapshot interface{}
-	Data []interface{}
+	Data []Event
 }
 
 func (es *MemoryEventStore) ReadAllEvents(aggregate Aggregate) ([]interface{}, error) {
