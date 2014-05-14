@@ -11,43 +11,7 @@ func init() {
 	web.DOMAIN = 10
 }
 
-func Test_Should_not_allow_BlacklistKnownVisitor_without_prior_visit(t *testing.T) {
-	// Given
-	var visitorId int64 = 1
-	//var visitorIP int32 = 1
-	//var visitorRequest []byte = make([]byte, 0)
-	var eventBus chan interface{} = make(chan interface{}, 2)
-	var eventStream []interface{} = []interface{}{
-		//web.NewVisitorRequestReceived(visitorId, visitorIP, visitorRequest),
-	}
-	var es cqrs.EventStorer = &cqrs.MemoryEventStore {
-		Snapshot: nil,
-		Data: eventStream,
-	}
-	command := web.NewBlacklistKnownVisitor(visitorId)
 
-	// When
-	web.Handle(eventBus, es, command)
-	
-	// Then
-	select {
-		case event := <-eventBus:
-			switch e := event.(type) {
-				case web.VisitorBlacklisted: {
-					if e.Id != visitorId {
-						t.Errorf("Invalid visitor id [ %s ]\n", e)
-					}
-					return
-				}
-				default: {
-					t.Errorf("Incorrect event received [ %s ]\n", e)
-				}
-			}
-			break
-		default:
-			t.Errorf("Nothing on the bus\n")
-	}
-}
 
 
 /*

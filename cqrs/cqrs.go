@@ -5,45 +5,39 @@ import (
 	"fmt"
 )
 
-// TODO: Handle command & event versioning
+const MESSAGE_TYPE_MASK = 0x80000000
+// http://crc32-checksum.waraxe.us/
 
 type AggregateLoader interface {
 	Load(events []Event)
 }
 
 type Aggregate interface {
-	GetDomain() int32
-	GetKind() int32
-	GetId() int64
+	GetDomain() uint32
+	GetId() uint64
 	GetVersion() int32
-	MatchById(domain int32, kind int32, id int64) bool
+	MatchById(domain uint32, id uint64) bool
 }
 
 type AggregateMemento struct {
-	Domain int32 `json:"__domain"`		// Application
-	Kind int32 `json:"__kind"`			// Aggregate Kind
-	Id int64 `json:"__id"`				// Aggregate Id
+	Domain uint32 `json:"__domain"`		// Aggregate Domain
+	Id uint64 `json:"__id"`				// Aggregate Id
 	Version int32 `json:"__version"`	// Aggregate Version
 }
 
-func NewAggregate(domain int32, kind int32, id int64, version int32) AggregateMemento {
+func NewAggregate(domain uint32, id uint64, version int32) AggregateMemento {
 	return AggregateMemento {
 		Domain: domain,
-		Kind: kind,
 		Id: id,
 		Version: version,
 	}
 }
 
-func (aggregate AggregateMemento) GetDomain() int32 {
+func (aggregate AggregateMemento) GetDomain() uint32 {
 	return aggregate.Domain
 }
 
-func (aggregate AggregateMemento) GetKind() int32 {
-	return aggregate.Kind
-}
-
-func (aggregate AggregateMemento) GetId() int64 {
+func (aggregate AggregateMemento) GetId() uint64 {
 	return aggregate.Id
 }
 
@@ -51,31 +45,31 @@ func (aggregate AggregateMemento) GetVersion() int32 {
 	return aggregate.Version
 }
 
-func (aggregate AggregateMemento) MatchById(domain int32, kind int32, id int64) bool {
-	return aggregate.Domain == domain && aggregate.Kind == kind && aggregate.Id == id
+func (aggregate AggregateMemento) MatchById(domain uint32, id uint64) bool {
+	return aggregate.Domain == domain && aggregate.Id == id
 }
 
 func (aggregate AggregateMemento) String() string {
-	return fmt.Sprintf("%d.%d.%d @ %d", aggregate.Domain, aggregate.Kind, aggregate.Id, aggregate.Version)
+	return fmt.Sprintf("%d.%d @ %d", aggregate.Domain, aggregate.Id, aggregate.Version)
 }
 
 type Command interface {
-	GetCommandType() int32
+	GetCommandType() uint32
 }
 
 type CommandMemento struct {
 	AggregateMemento					// Aggregate
-	CommandType int32 `json:"__ctype"`	// Command Type
+	CommandType uint32 `json:"__ctype"`	// Command Type
 }
 
-func NewCommand(domain int32, kind int32, id int64, version int32, commandType int32) CommandMemento {
+func NewCommand(domain uint32, commandType uint32, id uint64, version int32) CommandMemento {
 	return CommandMemento {
-		AggregateMemento: NewAggregate(domain, kind, id, version),
+		AggregateMemento: NewAggregate(domain, id, version),
 		CommandType: commandType,
 	}
 }
 
-func (command CommandMemento) GetCommandType() int32 {
+func (command CommandMemento) GetCommandType() uint32 {
 	return command.CommandType
 }
 
@@ -84,22 +78,22 @@ func (command CommandMemento) String() string {
 }
 
 type Event interface {
-	GetEventType() int32
+	GetEventType() uint32
 }
 
 type EventMemento struct {
 	AggregateMemento					// Aggregate
-	EventType int32 `json:"__etype"`	// Event Type
+	EventType uint32 `json:"__etype"`	// Event Type
 }
 
-func NewEvent(domain int32, kind int32, id int64, version int32, eventType int32) EventMemento {
+func NewEvent(domain uint32, eventType uint32, id uint64, version int32) EventMemento {
 	return EventMemento {
-		AggregateMemento: NewAggregate(domain, kind, id, version),
+		AggregateMemento: NewAggregate(domain, id, version),
 		EventType: eventType,
 	}
 }
 
-func (event EventMemento) GetEventType() int32 {
+func (event EventMemento) GetEventType() uint32 {
 	return event.EventType
 }
 
@@ -121,7 +115,7 @@ func (es *MemoryEventStore) ReadAllEvents(aggregate Aggregate) ([]interface{}, e
 	for _, item := range es.Data {
 		switch event := item.(type) {
 			case Aggregate: {
-				if (event.MatchById(aggregate.GetDomain(), aggregate.GetKind(), aggregate.GetId())) {
+				if (event.MatchById(aggregate.GetDomain(), aggregate.GetId())) {
 					matching = append(matching, item)
 				}
 				break
