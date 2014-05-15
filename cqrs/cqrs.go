@@ -8,6 +8,14 @@ import (
 const MESSAGE_TYPE_MASK = 0x80000000
 // http://crc32-checksum.waraxe.us/
 
+func C(version uint32, commandId uint32) uint32 {
+	return MESSAGE_TYPE_MASK | (version << 16) | (commandId & 0xFF)
+}
+
+func E(version uint32, commandId uint32) uint32 {
+	return (MESSAGE_TYPE_MASK-1) | (version << 16) | (commandId & 0xFF)
+}
+
 type AggregateLoader interface {
 	Load(events []Event)
 }
@@ -127,6 +135,17 @@ func (es *MemoryEventStore) ReadAllEvents(aggregate Aggregate) ([]interface{}, e
 	}
 	return matching, nil
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 

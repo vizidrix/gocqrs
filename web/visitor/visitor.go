@@ -5,28 +5,25 @@ import (
 	"github.com/vizidrix/gocqrs/cqrs"
 )
 
-const DOMAIN_NAME string = "github.com/vizidrix/gocqrs/cqrs/web/visitor"
-const DOMAIN uint32 = 0xD937B694
+var DOMAIN_NAME string = "github.com/vizidrix/gocqrs/cqrs/web/visitor"
+var DOMAIN uint32 = 0xD937B694
 
-const C_V1 uint32 = 0x80010000
-const E_V1 uint32 = 0x00010000
-
-const ( /* Commands */
-	C_Register         = C_V1 | 0x0001
-	C_HandleRequest    = C_V1 | 0x0002
-	C_Blacklist        = C_V1 | 0x0003
-	C_RescindBlacklist = C_V1 | 0x0004
-	C_Whitelist        = C_V1 | 0x0005
-	C_RescindWhitelist = C_V1 | 0x0006
+var ( /* Commands */
+	C_Register         = cqrs.C(1, 1)
+	C_HandleRequest    = cqrs.C(1, 2)
+	C_Blacklist        = cqrs.C(1, 3)
+	C_RescindBlacklist = cqrs.C(1, 4)
+	C_Whitelist        = cqrs.C(1, 5)
+	C_RescindWhitelist = cqrs.C(1, 6)
 )
 
-const ( /* Events */
-	E_Registered         = E_V1 | 0x0001
-	E_RequestHandled     = E_V1 | 0x0002
-	E_Blacklisted        = E_V1 | 0x0003
-	E_BlacklistRescinded = E_V1 | 0x0004
-	E_Whitelisted        = E_V1 | 0x0005
-	E_WhitelistRescinded = E_V1 | 0x0006
+var ( /* Events */
+	E_Registered         = cqrs.E(1, 1)
+	E_RequestHandled     = cqrs.E(1, 2)
+	E_Blacklisted        = cqrs.E(1, 3)
+	E_BlacklistRescinded = cqrs.E(1, 4)
+	E_Whitelisted        = cqrs.E(1, 5)
+	E_WhitelistRescinded = cqrs.E(1, 6)
 )
 
 type VisitorMemento struct {
