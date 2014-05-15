@@ -50,7 +50,7 @@ func Test_Should_not_allow_Blacklist_without_register(t *testing.T) {
 
 func Test_Should_allow_valid_visitor_register(t *testing.T) {
 	var eventBus chan cqrs.Event = make(chan cqrs.Event, 1)
-	
+		
 	// Given
 	es := &cqrs.MemoryEventStore { Data: []cqrs.Event{} }
 
