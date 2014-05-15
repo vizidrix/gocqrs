@@ -11,29 +11,35 @@ func init() {
 }
 
 func Test_Should_not_allow_Blacklist_without_register(t *testing.T) {
-	// Given
-	var visitorId uint64 = 1024
-	//var visitorIP int32 = 1
-	//var visitorRequest []byte = make([]byte, 0)
 	var eventBus chan cqrs.Event = make(chan cqrs.Event, 1)
-	var eventStream []cqrs.Event = []cqrs.Event{
-		//web.NewVisitorRequestReceived(visitorId, visitorIP, visitorRequest),
-	}
-	var es cqrs.EventStorer = &cqrs.MemoryEventStore {
-		Snapshot: nil,
-		Data: eventStream,
-	}
-	command := visitor.NewBlacklist(visitorId, 0)
+
+	// Given
+	es := &cqrs.MemoryEventStore { Data: []cqrs.Event{} }
 
 	// When
-	visitor.Handle(eventBus, es, command)
+	visitor.Handle(eventBus, es, visitor.NewBlacklist(1024, 0))
+	//var visitorId uint64 = 1024
+	//var visitorIP int32 = 1
+	//var visitorRequest []byte = make([]byte, 0)
+	
+	//var eventStream []cqrs.Event = []cqrs.Event{
+		//web.NewVisitorRequestReceived(visitorId, visitorIP, visitorRequest),
+	//}
+	//var es cqrs.EventStorer = &cqrs.MemoryEventStore {
+	//	Snapshot: nil,
+	//	Data: eventStream,
+	//}
+	//command := visitor.NewBlacklist(visitorId, 0)
+
+	// When
+	//visitor.Handle(eventBus, es, command)
 	
 	// Then
 	select {
 		case event := <-eventBus:
 			switch e := event.(type) {
 				case visitor.Blacklisted: {
-					if e.Id != visitorId {
+					if e.Id != 1023 {
 						t.Errorf("Invalid visitor id [ %s ]\n", e)
 					}
 					return
@@ -50,7 +56,7 @@ func Test_Should_not_allow_Blacklist_without_register(t *testing.T) {
 
 func Test_Should_allow_valid_visitor_register(t *testing.T) {
 	var eventBus chan cqrs.Event = make(chan cqrs.Event, 1)
-		
+
 	// Given
 	es := &cqrs.MemoryEventStore { Data: []cqrs.Event{} }
 

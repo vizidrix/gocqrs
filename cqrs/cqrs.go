@@ -50,7 +50,7 @@ func (aggregate AggregateMemento) MatchById(domain uint32, id uint64) bool {
 }
 
 func (aggregate AggregateMemento) String() string {
-	return fmt.Sprintf("%d.%d @ %d", aggregate.Domain, aggregate.Id, aggregate.Version)
+	return fmt.Sprintf("DM[%d] ID[%d] V[%d]", aggregate.Domain, aggregate.Id, aggregate.Version)
 }
 
 type Command interface {
@@ -74,7 +74,7 @@ func (command CommandMemento) GetCommandType() uint32 {
 }
 
 func (command CommandMemento) String() string {
-	return fmt.Sprintf(" <C [ %s -> %d ] C\\> ", command.AggregateMemento.String(), command.CommandType)
+	return fmt.Sprintf(" <C [ %s -> C[%d] ] C\\> ", command.AggregateMemento.String(), command.CommandType)
 }
 
 type Event interface {
@@ -98,7 +98,7 @@ func (event EventMemento) GetEventType() uint32 {
 }
 
 func (event EventMemento) String() string {
-	return fmt.Sprintf(" <E [ %s -> %d ] E\\> ", event.AggregateMemento.String(), event.EventType)
+	return fmt.Sprintf(" <E [ %s -> E[%d] ] E\\> ", event.AggregateMemento.String(), event.EventType)
 }
 
 type EventStorer interface {
