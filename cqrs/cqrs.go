@@ -53,10 +53,6 @@ func (aggregate AggregateMemento) GetVersion() int32 {
 	return aggregate.Version
 }
 
-func (aggregate AggregateMemento) MatchById(domain uint32, id uint64) bool {
-	return aggregate.Domain == domain && aggregate.Id == id
-}
-
 func (aggregate AggregateMemento) String() string {
 	return fmt.Sprintf("DM[%d] ID[%d] V[%d]", aggregate.Domain, aggregate.Id, aggregate.Version)
 }
@@ -123,10 +119,10 @@ func (es *MemoryEventStore) ReadAllEvents(aggregate Aggregate) ([]interface{}, e
 	for _, item := range es.Data {
 		switch event := item.(type) {
 			case Aggregate: {
-				if (event.MatchById(aggregate.GetDomain(), aggregate.GetId())) {
-					matching = append(matching, item)
+				if (event.GetDomain() != aggregate.GetDomain() || event.GetId() != aggregate.GetId())) {
+					break
 				}
-				break
+				matching = append(matching, item)
 			}
 			default: {
 				return nil, errors.New(fmt.Sprintf("Item in MemoryEventStore isn't an event [ %s ]\n", item))
