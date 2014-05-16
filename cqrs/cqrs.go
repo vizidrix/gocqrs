@@ -107,12 +107,14 @@ func (event EventMemento) String() string {
 
 type EventStorer interface {
 	StoreEvent(event Event)
-	ReadAllEvents(aggregate Aggregate) ([]interface{}, error)
-	CacheEvent(event Event)
+	ReadAllEvents() (int, []Event, error)
+	ReadEventsFrom(index int) (int, []Event, error)
+	ReadAggregateEvents(aggregate Aggregate) ([]interface{}, error)
 }
 
 type MemoryEventStore struct {
 	Snapshot interface{}
+	Cache []Event
 	Data []Event
 }
 
@@ -120,7 +122,11 @@ func (eventstore *MemoryEventStore) StoreEvent(event Event) {
 	eventstore.Data = append(eventstore.Data, event)
 }
 
-func (eventstore *MemoryEventStore) ReadAllEvents(aggregate Aggregate) ([]interface{}, error) {
+func (eventstore *MemoryEventStore) ReadAllEvents() (int, []Event, error) {
+	return len(eventstore.Data), eventstore.Data, nil
+}
+
+func (eventstore *MemoryEventStore) ReadAggregateEvents(aggregate Aggregate) ([]interface{}, error) {
 	matching := make([]interface{}, 0)
 	for _, item := range eventstore.Data {
 		switch event := item.(type) {
@@ -137,7 +143,6 @@ func (eventstore *MemoryEventStore) ReadAllEvents(aggregate Aggregate) ([]interf
 	}
 	return matching, nil
 }
-
 
 
 
