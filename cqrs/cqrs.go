@@ -109,12 +109,11 @@ type EventStorer interface {
 	StoreEvent(event Event)
 	ReadAllEvents() (int, []Event, error)
 	ReadEventsFrom(index int) (int, []Event, error)
-	ReadAggregateEvents(aggregate Aggregate) ([]interface{}, error)
+	ReadAggregateEvents(aggregate Aggregate) ([]Event, error)
 }
 
 type MemoryEventStore struct {
 	Snapshot interface{}
-	Cache []Event
 	Data []Event
 }
 
@@ -126,15 +125,27 @@ func (eventstore *MemoryEventStore) ReadAllEvents() (int, []Event, error) {
 	return len(eventstore.Data), eventstore.Data, nil
 }
 
-func (eventstore *MemoryEventStore) ReadAggregateEvents(aggregate Aggregate) ([]interface{}, error) {
-	matching := make([]interface{}, 0)
+func (eventstore *MemoryEventStore) ReadEventsFrom(index int) (int, []Event, error) {
+	if index < len(eventstore.Data) {
+		events := make([]Event, 0)
+		for i := index; i < len(eventstore.Data); i++ {
+			events = append(events, eventstore.Data[i])
+		}
+		return len(eventstore.Data), events, nil
+	} else {
+		return 0, nil, errors.New("Index position out of range")
+	}
+}
+
+func (eventstore *MemoryEventStore) ReadAggregateEvents(aggregate Aggregate) ([]Event, error) {
+	matching := make([]Event, 0)
 	for _, item := range eventstore.Data {
 		switch event := item.(type) {
 			case Aggregate: {
 				if (event.GetDomain() != aggregate.GetDomain() || event.GetId() != aggregate.GetId())) {
 					break
 				}
-				matching = append(matching, item)
+				matching = append(matching, item.(Event))
 			}
 			default: {
 				return nil, errors.New(fmt.Sprintf("Item in MemoryEventStore isn't an event [ %s ]\n", item))
