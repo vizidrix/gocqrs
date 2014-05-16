@@ -13,8 +13,8 @@ So instead I changed this to:
 /administration/server/user/rickard/
 
 i.e. the usecases are "account management" and "user administration", 
-with changepassword and resetpassword respecticaly. With that change it 
-became much more easy to handle, on the server and client. So, again, 
+with changepassword and resetpassword respectively. With that change it 
+became much easier to handle, on the server and client. So, again, 
 "customer" to me doesn't sound like a usecase. It sounds like exposing 
 the domain model, and that breaks down fantastically when you try to do 
 HATEOAS properly.

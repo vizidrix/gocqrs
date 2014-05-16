@@ -106,7 +106,9 @@ func (event EventMemento) String() string {
 }
 
 type EventStorer interface {
+	StoreEvent(event Event)
 	ReadAllEvents(aggregate Aggregate) ([]interface{}, error)
+	CacheEvent(event Event)
 }
 
 type MemoryEventStore struct {
@@ -114,9 +116,13 @@ type MemoryEventStore struct {
 	Data []Event
 }
 
-func (es *MemoryEventStore) ReadAllEvents(aggregate Aggregate) ([]interface{}, error) {
+func (eventstore *MemoryEventStore) StoreEvent(event Event) {
+	eventstore.Data = append(eventstore.Data, event)
+}
+
+func (eventstore *MemoryEventStore) ReadAllEvents(aggregate Aggregate) ([]interface{}, error) {
 	matching := make([]interface{}, 0)
-	for _, item := range es.Data {
+	for _, item := range eventstore.Data {
 		switch event := item.(type) {
 			case Aggregate: {
 				if (event.GetDomain() != aggregate.GetDomain() || event.GetId() != aggregate.GetId())) {
