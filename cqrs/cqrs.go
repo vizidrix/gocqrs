@@ -155,7 +155,10 @@ func (eventstore *MemoryEventStore) ReadAggregateEvents(aggregate Aggregate) ([]
 	return matching, nil
 }
 
-
+type EventSubscription struct {
+	EventChannel chan Event
+	EventTypes []uint32
+}
 
 
 
