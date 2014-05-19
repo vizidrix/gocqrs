@@ -1,14 +1,14 @@
 package gocqrs_test
 
 import (
-	"github.com/vizidrix/gocqrs/cqrs"
-	"github.com/vizidrix/gocqrs/web"
-	"testing"
-	"fmt"
+	//"github.com/vizidrix/gocqrs/cqrs"
+	//"github.com/vizidrix/gocqrs/web"
+	//"testing"
+	//"fmt"
 )
 
 func init() {
-	web.DOMAIN = 10
+	//web.DOMAIN = 10
 }
 
 
