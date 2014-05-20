@@ -106,18 +106,20 @@ func (event EventMemento) String() string {
 }
 
 type EventStorer interface {
-	StoreEvent(event Event)
+	PersistEvent(event Event)
 	ReadAllEvents() (int, []Event, error)
-	ReadEventsFrom(index int) (int, []Event, error)
+//	ReadAllEventsFrom(index int) (int, []Event, error)
 	ReadAggregateEvents(aggregate Aggregate) ([]Event, error)
+	ReadAggregateEventsFromSnapshot(aggregate Aggregate) ([]Event, error)
 }
 
 type MemoryEventStore struct {
-	Snapshot interface{}
+	Snapshot []Aggregate
+	EventsChan chan Event
 	Data []Event
 }
 
-func (eventstore *MemoryEventStore) StoreEvent(event Event) {
+func (eventstore *MemoryEventStore) PersistEvent(event Event) {
 	eventstore.Data = append(eventstore.Data, event)
 }
 
@@ -125,7 +127,7 @@ func (eventstore *MemoryEventStore) ReadAllEvents() (int, []Event, error) {
 	return len(eventstore.Data), eventstore.Data, nil
 }
 
-func (eventstore *MemoryEventStore) ReadEventsFrom(index int) (int, []Event, error) {
+func (eventstore *MemoryEventStore) ReadAllEventsFrom(index int) (int, []Event, error) {
 	if index < len(eventstore.Data) {
 		events := make([]Event, 0)
 		for i := index; i < len(eventstore.Data); i++ {
@@ -155,9 +157,33 @@ func (eventstore *MemoryEventStore) ReadAggregateEvents(aggregate Aggregate) ([]
 	return matching, nil
 }
 
+func (eventstore *MemoryEventStore) ReadAggregateEventsFromSnapshot(aggregate Aggregate) ([]Event, error) {
+	matching := make([]Event, 0)
+	for _, item := range eventstore.Data {
+		switch event := item.(type) {
+			case Aggregate: {
+				if (event.GetDomain() != aggregate.GetDomain() || event.GetId() != aggregate.GetId() || event.GetVersion() < aggregate.GetVersion()) {
+					break
+				}
+				matching = append(matching, item.(Event))
+			}
+			default: {
+				return nil, errors.New(fmt.Sprintf("Item in MemoryEventStore isn't an event [ %s ]\n", item))
+			}
+		}
+	}
+	return matching, nil
+}
 
-
-
+func (eventstore *cqrs.MemoryEventStore) PersistenceLayer(eventBus chan cqrs.Event) {
+	for {
+		select {
+		case event := <- eventstore.EventsChan:
+			eventstore.StoreEvent(event)
+			eventBus <- event
+		}
+	}
+}
 
 
 
