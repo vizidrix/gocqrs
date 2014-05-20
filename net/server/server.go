@@ -67,6 +67,7 @@ func (svr *cqrsTCPServer) ListenOn(port uint32, closeChan chan struct{}) {
 	go func() { // Run a goroutine which will close the connection on cancel chan
 		select {
 		case <-svr.closeChan:
+			close(closeChan)
 		case <-closeChan:
 		}
 		svr.Log("Cancel chan was closed for listener\n")
@@ -87,6 +88,7 @@ func (svr *cqrsTCPServer) ListenOn(port uint32, closeChan chan struct{}) {
 			for _, connection := range svr.connections {
 				if connection != nil {
 					connection.Close()
+					svr.Log("Closed server connection...\n")
 				}
 			}
 		}()
@@ -99,7 +101,7 @@ func (svr *cqrsTCPServer) ListenOn(port uint32, closeChan chan struct{}) {
 				default:
 				}
 				svr.Log(fmt.Sprintf("Error accepting connection: [ %s ]\n", err))
-				<-time.After(1 * time.Second)
+				<-time.After(1 * time.Second) // Don't spam accept during error
 				continue
 			}
 			go svr.HandleConnection(connection) // Handle connection in another goroutine
@@ -142,3 +144,5 @@ func (svr *cqrsTCPServer) HandleConnection(connection net.Conn) error {
 	}
 	return errors.New("Invalid request\n")
 }
+
+func (svr)

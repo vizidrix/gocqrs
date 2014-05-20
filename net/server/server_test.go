@@ -1,9 +1,18 @@
 package server_test
 
 import (
-	//"github.com/vizidrix/gocqrs/net/server"
+	"github.com/vizidrix/gocqrs/net/server"
 	"testing"
 )
+
+const TEST_PORT = 4444 // Should be a port that isn't in use on test box
+
+func Test_Should_close_server_chan(t *testing.T) {
+	//server := NewTCPServer()
+	//closeChan := make(chan struct{})
+	//server.ListenOn(TEST_PORT, closeChan)
+
+}
 
 func Test_Should_return_views_list(t *testing.T) {
 	request :=
@@ -16,7 +25,6 @@ User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_2) AppleWebKit/537.36 (K
 Accept-Encoding: gzip,deflate,sdch
 Accept-Language: en-US,en;q=0.8`
 
-	
 	t.Errorf("Should serve views [ \n%s\n ]\n", request)
 }
 
