@@ -114,9 +114,15 @@ type EventStorer interface {
 }
 
 type MemoryEventStore struct {
-	Snapshot []Aggregate
-	EventsChan chan Event
+	Snapshots []Aggregate
 	Data []Event
+}
+
+func NewMemoryEventStore() MemoryEventStore {
+	return MemoryEventStore {
+		Snapshots: make([]Aggregate, 0),
+		Data: make([]Event, 0),
+	}
 }
 
 func (eventstore *MemoryEventStore) PersistEvent(event Event) {
@@ -175,15 +181,7 @@ func (eventstore *MemoryEventStore) ReadAggregateEventsFromSnapshot(aggregate Ag
 	return matching, nil
 }
 
-func (eventstore *cqrs.MemoryEventStore) PersistenceLayer(eventBus chan cqrs.Event) {
-	for {
-		select {
-		case event := <- eventstore.EventsChan:
-			eventstore.StoreEvent(event)
-			eventBus <- event
-		}
-	}
-}
+
 
 
 
