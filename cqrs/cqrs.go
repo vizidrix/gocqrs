@@ -106,7 +106,7 @@ func (event EventMemento) String() string {
 }
 
 type EventStorer interface {
-	PersistEvent(event Event)
+	StoreEvent(event Event)
 	ReadAllEvents() (int, []Event, error)
 //	ReadAllEventsFrom(index int) (int, []Event, error)
 	ReadAggregateEvents(aggregate Aggregate) ([]Event, error)
@@ -125,7 +125,7 @@ func NewMemoryEventStore() MemoryEventStore {
 	}
 }
 
-func (eventstore *MemoryEventStore) PersistEvent(event Event) {
+func (eventstore *MemoryEventStore) StoreEvent(event Event) {
 	eventstore.Data = append(eventstore.Data, event)
 }
 
