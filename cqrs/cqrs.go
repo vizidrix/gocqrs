@@ -6,14 +6,15 @@ import (
 )
 
 const MESSAGE_TYPE_MASK = 0x80000000
+
 // http://crc32-checksum.waraxe.us/
 
-func CommandType(version uint32, commandId uint32) uint32 {
+func C(version uint32, commandId uint32) uint32 {
 	return MESSAGE_TYPE_MASK | (version << 16) | (commandId & 0xFF)
 }
 
-func EventType(version uint32, commandId uint32) uint32 {
-	return (MESSAGE_TYPE_MASK-1) | (version << 16) | (commandId & 0xFF)
+func E(version uint32, commandId uint32) uint32 {
+	return (MESSAGE_TYPE_MASK - 1) | (version << 16) | (commandId & 0xFF)
 }
 
 type AggregateLoader interface {
@@ -28,15 +29,15 @@ type Aggregate interface {
 }
 
 type AggregateMemento struct {
-	Domain uint32 `json:"__domain"`		// Aggregate Domain
-	Id uint64 `json:"__id"`				// Aggregate Id
-	Version int32 `json:"__version"`	// Aggregate Version
+	Domain  uint32 `json:"__domain"`  // Aggregate Domain
+	Id      uint64 `json:"__id"`      // Aggregate Id
+	Version int32  `json:"__version"` // Aggregate Version
 }
 
 func NewAggregate(domain uint32, id uint64, version int32) AggregateMemento {
-	return AggregateMemento {
-		Domain: domain,
-		Id: id,
+	return AggregateMemento{
+		Domain:  domain,
+		Id:      id,
 		Version: version,
 	}
 }
@@ -62,14 +63,14 @@ type Command interface {
 }
 
 type CommandMemento struct {
-	AggregateMemento					// Aggregate
-	CommandType uint32 `json:"__ctype"`	// Command Type
+	AggregateMemento        // Aggregate
+	CommandType      uint32 `json:"__ctype"` // Command Type
 }
 
 func NewCommand(domain uint32, commandType uint32, id uint64, version int32) CommandMemento {
-	return CommandMemento {
+	return CommandMemento{
 		AggregateMemento: NewAggregate(domain, id, version),
-		CommandType: commandType,
+		CommandType:      commandType,
 	}
 }
 
@@ -86,14 +87,14 @@ type Event interface {
 }
 
 type EventMemento struct {
-	AggregateMemento					// Aggregate
-	EventType uint32 `json:"__etype"`	// Event Type
+	AggregateMemento        // Aggregate
+	EventType        uint32 `json:"__etype"` // Event Type
 }
 
 func NewEvent(domain uint32, eventType uint32, id uint64, version int32) EventMemento {
-	return EventMemento {
+	return EventMemento{
 		AggregateMemento: NewAggregate(domain, id, version),
-		EventType: eventType,
+		EventType:        eventType,
 	}
 }
 
@@ -108,20 +109,20 @@ func (event EventMemento) String() string {
 type EventStorer interface {
 	StoreEvent(event Event)
 	ReadAllEvents() (int, []Event, error)
-//	ReadAllEventsFrom(index int) (int, []Event, error)
+	//	ReadAllEventsFrom(index int) (int, []Event, error)
 	ReadAggregateEvents(aggregate Aggregate) ([]Event, error)
 	ReadAggregateEventsFromSnapshot(aggregate Aggregate) ([]Event, error)
 }
 
 type MemoryEventStore struct {
 	Snapshots []Aggregate
-	Data []Event
+	Data      []Event
 }
 
 func NewMemoryEventStore() MemoryEventStore {
-	return MemoryEventStore {
+	return MemoryEventStore{
 		Snapshots: make([]Aggregate, 0),
-		Data: make([]Event, 0),
+		Data:      make([]Event, 0),
 	}
 }
 
@@ -149,13 +150,15 @@ func (eventstore *MemoryEventStore) ReadAggregateEvents(aggregate Aggregate) ([]
 	matching := make([]Event, 0)
 	for _, item := range eventstore.Data {
 		switch event := item.(type) {
-			case Aggregate: {
-				if (event.GetDomain() != aggregate.GetDomain() || event.GetId() != aggregate.GetId())) {
+		case Aggregate:
+			{
+				if event.GetDomain() != aggregate.GetDomain() || event.GetId() != aggregate.GetId() {
 					break
 				}
 				matching = append(matching, item.(Event))
 			}
-			default: {
+		default:
+			{
 				return nil, errors.New(fmt.Sprintf("Item in MemoryEventStore isn't an event [ %s ]\n", item))
 			}
 		}
@@ -167,26 +170,18 @@ func (eventstore *MemoryEventStore) ReadAggregateEventsFromSnapshot(aggregate Ag
 	matching := make([]Event, 0)
 	for _, item := range eventstore.Data {
 		switch event := item.(type) {
-			case Aggregate: {
-				if (event.GetDomain() != aggregate.GetDomain() || event.GetId() != aggregate.GetId() || event.GetVersion() < aggregate.GetVersion()) {
+		case Aggregate:
+			{
+				if event.GetDomain() != aggregate.GetDomain() || event.GetId() != aggregate.GetId() || event.GetVersion() < aggregate.GetVersion() {
 					break
 				}
 				matching = append(matching, item.(Event))
 			}
-			default: {
+		default:
+			{
 				return nil, errors.New(fmt.Sprintf("Item in MemoryEventStore isn't an event [ %s ]\n", item))
 			}
 		}
 	}
 	return matching, nil
 }
-
-
-
-
-
-
-
-
-
-
