@@ -59,11 +59,13 @@ func (aggregate AggregateMemento) String() string {
 }
 
 type Command interface {
+	GetCommandId() uint64
 	GetCommandType() uint32
 }
 
 type CommandMemento struct {
 	AggregateMemento        // Aggregate
+	CommandId        uint64 `json:"__cid"`   // Command Id
 	CommandType      uint32 `json:"__ctype"` // Command Type
 }
 
@@ -83,11 +85,13 @@ func (command CommandMemento) String() string {
 }
 
 type Event interface {
+	GetEventId() uint64
 	GetEventType() uint32
 }
 
 type EventMemento struct {
 	AggregateMemento        // Aggregate
+	EventId          uint64 `json:"__eid"`   // Event Id
 	EventType        uint32 `json:"__etype"` // Event Type
 }
 
@@ -109,9 +113,8 @@ func (event EventMemento) String() string {
 type EventStorer interface {
 	StoreEvent(event Event)
 	ReadAllEvents() (int, []Event, error)
-	//	ReadAllEventsFrom(index int) (int, []Event, error)
-	ReadAggregateEvents(aggregate Aggregate) ([]Event, error)
-	ReadAggregateEventsFromSnapshot(aggregate Aggregate) ([]Event, error)
+	ReadAggregateEvents(domain uint32, id uint64) ([]Event, error)
+	ReadAggregateEventsFromSnapshot(domain uint32, id uint64, version int32) ([]Event, error)
 }
 
 type MemoryEventStore struct {
@@ -134,25 +137,13 @@ func (eventstore *MemoryEventStore) ReadAllEvents() (int, []Event, error) {
 	return len(eventstore.Data), eventstore.Data, nil
 }
 
-func (eventstore *MemoryEventStore) ReadAllEventsFrom(index int) (int, []Event, error) {
-	if index < len(eventstore.Data) {
-		events := make([]Event, 0)
-		for i := index; i < len(eventstore.Data); i++ {
-			events = append(events, eventstore.Data[i])
-		}
-		return len(eventstore.Data), events, nil
-	} else {
-		return 0, nil, errors.New("Index position out of range")
-	}
-}
-
-func (eventstore *MemoryEventStore) ReadAggregateEvents(aggregate Aggregate) ([]Event, error) {
+func (eventstore *MemoryEventStore) ReadAggregateEvents(domain uint32, id uint64) ([]Event, error) {
 	matching := make([]Event, 0)
 	for _, item := range eventstore.Data {
 		switch event := item.(type) {
 		case Aggregate:
 			{
-				if event.GetDomain() != aggregate.GetDomain() || event.GetId() != aggregate.GetId() {
+				if event.GetDomain() != domain || event.GetId() != id {
 					break
 				}
 				matching = append(matching, item.(Event))
@@ -166,13 +157,13 @@ func (eventstore *MemoryEventStore) ReadAggregateEvents(aggregate Aggregate) ([]
 	return matching, nil
 }
 
-func (eventstore *MemoryEventStore) ReadAggregateEventsFromSnapshot(aggregate Aggregate) ([]Event, error) {
+func (eventstore *MemoryEventStore) ReadAggregateEventsFromSnapshot(domain uint32, id uint64, version int32) ([]Event, error) {
 	matching := make([]Event, 0)
 	for _, item := range eventstore.Data {
 		switch event := item.(type) {
 		case Aggregate:
 			{
-				if event.GetDomain() != aggregate.GetDomain() || event.GetId() != aggregate.GetId() || event.GetVersion() < aggregate.GetVersion() {
+				if event.GetDomain() != domain || event.GetId() != id || event.GetVersion() < version {
 					break
 				}
 				matching = append(matching, item.(Event))
