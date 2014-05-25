@@ -80,6 +80,10 @@ func (command CommandMemento) GetCommandType() uint32 {
 	return command.CommandType
 }
 
+func (command CommandMemento) GetCommandId() uint64 {
+	return command.CommandId
+}
+
 func (command CommandMemento) String() string {
 	return fmt.Sprintf(" <C [ %s -> C[%d] ] C\\> ", command.AggregateMemento.String(), command.CommandType)
 }
@@ -104,6 +108,10 @@ func NewEvent(domain uint32, eventType uint32, id uint64, version int32) EventMe
 
 func (event EventMemento) GetEventType() uint32 {
 	return event.EventType
+}
+
+func (event EventMemento) GetEventId() uint64 {
+	return event.EventId
 }
 
 func (event EventMemento) String() string {
