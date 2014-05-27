@@ -59,21 +59,18 @@ func (aggregate AggregateMemento) String() string {
 }
 
 type Command interface {
-	GetCommandId() uint64
 	GetCommandType() uint32
 }
 
 type CommandMemento struct {
 	AggregateMemento        // Aggregate
 	CommandType      uint32 `json:"__ctype"` // Command Type
-	CommandId        uint64 `json:"__cid"`   // Command Id
 }
 
-func NewCommand(domain uint32, aggregateid uint64, version int32, commandType uint32, commandid uint64) CommandMemento {
+func NewCommand(domain uint32, id uint64, version int32, commandType uint32) CommandMemento {
 	return CommandMemento{
-		AggregateMemento: NewAggregate(domain, aggregateid, version),
+		AggregateMemento: NewAggregate(domain, id, version),
 		CommandType:      commandType,
-		CommandId:        commandid,
 	}
 }
 
@@ -81,30 +78,23 @@ func (command CommandMemento) GetCommandType() uint32 {
 	return command.CommandType
 }
 
-func (command CommandMemento) GetCommandId() uint64 {
-	return command.CommandId
-}
-
 func (command CommandMemento) String() string {
 	return fmt.Sprintf(" <C [ %s -> C[%d] ] C\\> ", command.AggregateMemento.String(), command.CommandType)
 }
 
 type Event interface {
-	GetEventId() uint64
 	GetEventType() uint32
 }
 
 type EventMemento struct {
 	AggregateMemento        // Aggregate
 	EventType        uint32 `json:"__etype"` // Event Type
-	EventId          uint64 `json:"__eid"`   // Event Id
 }
 
-func NewEvent(domain uint32, id uint64, version int32, eventType uint32, eventId uint64) EventMemento {
+func NewEvent(domain uint32, id uint64, version int32, eventType uint32) EventMemento {
 	return EventMemento{
 		AggregateMemento: NewAggregate(domain, id, version),
 		EventType:        eventType,
-		EventId:          eventId,
 	}
 }
 
@@ -112,30 +102,8 @@ func (event EventMemento) GetEventType() uint32 {
 	return event.EventType
 }
 
-func (event EventMemento) GetEventId() uint64 {
-	return event.EventId
-}
-
 func (event EventMemento) String() string {
 	return fmt.Sprintf(" <E [ %s -> E[%d] ] E\\> ", event.AggregateMemento.String(), event.EventType)
-}
-
-type CorrelatedEvent interface {
-	GetCorrelationId() uint64
-}
-
-type CorrelationMemento struct {
-	CorrelationId uint64
-}
-
-func NewCorrelation(correlationId uint64) CorrelationMemento {
-	return CorrelationMemento{
-		CorrelationId: correlationId,
-	}
-}
-
-func (correlation CorrelationMemento) GetCorrelationId() uint64 {
-	return correlation.CorrelationId
 }
 
 type EventStorer interface {
@@ -164,7 +132,7 @@ func (eventstore *MemoryEventStore) StoreEvent(event Event) {
 func (eventstore *MemoryEventStore) ReadAllEvents() (int, []Event, error) {
 	return len(eventstore.Data), eventstore.Data, nil
 }
-c
+
 func (eventstore *MemoryEventStore) ReadAggregateEvents(domain uint32, id uint64) ([]Event, error) {
 	matching := make([]Event, 0)
 	for _, item := range eventstore.Data {
