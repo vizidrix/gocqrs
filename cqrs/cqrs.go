@@ -13,8 +13,8 @@ func C(version uint32, commandId uint32) uint32 {
 	return MESSAGE_TYPE_MASK | (version << 16) | (commandId & 0xFF)
 }
 
-func E(version uint32, commandId uint32) uint32 {
-	return (MESSAGE_TYPE_MASK - 1) | (version << 16) | (commandId & 0xFF)
+func E(version uint32, eventId uint32) uint32 {
+	return (MESSAGE_TYPE_MASK - 1) | (version << 16) | (eventId & 0xFF)
 }
 
 type AggregateLoader interface {
