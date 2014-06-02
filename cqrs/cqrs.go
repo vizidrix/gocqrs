@@ -55,11 +55,20 @@ func (aggregate AggregateMemento) GetVersion() int32 {
 	return aggregate.Version
 }
 
+func (aggregate AggregateMemento) MatchById(domain uint32, id uint64) bool {
+	if aggregate.Domain != domain || aggregate.Id != id {
+		return false
+	} else {
+		return true
+	}
+}
+
 func (aggregate AggregateMemento) String() string {
 	return fmt.Sprintf("DM[%d] ID[%d] V[%d]", aggregate.Domain, aggregate.Id, aggregate.Version)
 }
 
 type Command interface {
+	Aggregate
 	GetCommandType() uint32
 }
 
@@ -84,6 +93,7 @@ func (command CommandMemento) String() string {
 }
 
 type Event interface {
+	Aggregate
 	GetEventType() uint32
 }
 
