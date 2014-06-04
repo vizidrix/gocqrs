@@ -11,6 +11,31 @@ var (
 	E_TestEvent uint32 = E(1, 1)
 )
 
+type MockEventBus struct {
+	SubscriptionChan chan *Subscription
+	PublishChan chan Event
+	EventChan chan Event
+	CancelChan chan struct{}
+}
+
+func NewMockEventBus() *MockEventBus {
+	return &MockEventBus {
+		SubscriptionChan: make(chan *Subscription, 1),
+		PublishChan: make(chan Event, 1),
+		EventChan: make(chan Event, 1),
+		CancelChan: make(chan struct{}),
+	}
+}
+
+func (mock *MockEventBus) Create() EventRouter {
+	return NewChannelEventBus(
+		mock.SubscriptionChan,
+		mock.PublishChan,
+		func() chan Event { return mock.EventChan },
+		func() chan struct{} { return mock.CancelChan },
+	)
+}
+
 type TestEvent struct {
 	EventMemento
 	Value string
@@ -19,7 +44,6 @@ type TestEvent struct {
 func NewTestEvent(id uint64, version uint32, value string) TestEvent {
 	return TestEvent {
 		EventMemento: NewEvent(DOMAIN, id, version, E_TestEvent),
-		//Event: cqrs.NewEvent(DOMAIN, id, version, E_TestEvent),
 		Value: value,
 	}
 }
@@ -30,17 +54,24 @@ func Test_Should_filter_non_matching_events_ByEventType(t *testing.T) {
 	filter := ByEventTypes(10)
 
 	if filter.Predicate(event) {
-		t.Errorf("Expected filter ByEventType to return false")
+		t.Errorf("Expected filter ByEventType for [ %d ] with [ %d ] to return false",
+			E_TestEvent, event.GetEventType())
+	}
+}
+
+func Test_Should_return_nil_for_empty_filter_set(t *testing.T) {
+	if filter := ByEventTypes(); filter != nil {
+		t.Errorf("Should have returned nil for empty filter")
 	}
 }
 
 func Test_Should_filter_matching_events_ByEventType(t *testing.T) {
 	event := NewTestEvent(1, 1, "test")
+	filter := ByEventTypes(E_TestEvent)
 
-	filter := ByEventTypes(20)
-
-	if filter.Predicate(event) {
-		t.Errorf("Expected filter ByEventType to return true")
+	if !filter.Predicate(event) {
+		t.Errorf("Expected filter ByEventType for [ %d ] with [ %d ] to return true",
+			E_TestEvent, event.GetEventType())
 	}
 }
 
@@ -51,22 +82,14 @@ func Test_Should_return_an_error_on_nil_filter(t *testing.T) {
 		t.Errorf("Should have returned an error for nil type filter but was [ %v ]\n", err)
 	}
 }
-/*
-func Test_Should_return_an_error_on_empty_filter(t *testing.T) {
-	_, err := cqrs.EventBus.Subscribe(...[]uint32{})
-
-	if err != cqrs.ErrInvalidEmptyTypeFilter {
-		t.Errorf("Should have returned an error for empty type filter but was [ %v ]\n", err)
-	}
-}
-*/
 
 func Test_Should_return_subscription_token_for_valid_filter_set(t *testing.T) {
 	//handle, err := cqrs.EventBus.Subscribe(
 	//	cqrs.ByEventTypes(10, 20, 40),
 	//	cqrs.ByAggregateIds(20, 21, 23),
 	//	)
-	handle, err := EventBus.Subscribe(ByEventTypes(10))
+	eventbus := NewMockEventBus().Create()
+	handle, err := eventbus.Subscribe(ByEventTypes(10))
 
 	if err != nil {
 		t.Errorf("Should not have err but was [ %s ]\n", err)
@@ -79,28 +102,16 @@ func Test_Should_return_subscription_token_for_valid_filter_set(t *testing.T) {
 }
 
 func Test_Should_return_error_when_publishing_nil_event(t *testing.T) {
-	err := EventBus.Publish(nil)
-
-	if err != ErrInvalidNilPublishedEvent {
+	eventbus := NewMockEventBus().Create()
+	if err := eventbus.Publish(nil); err != ErrInvalidNilPublishedEvent {
 		t.Errorf("Should have returned an error for nil event in publish but was [ %v ]\n", err)
 		return
 	}
 }
 
 func Test_Should_receive_matching_event_when_published(t *testing.T) {
-	subscriptionChan := make(chan *Subscription, 1)
-	publishChan := make(chan Event, 1)
-	eventChan := make(chan Event, 1)
-	cancelChan := make(chan struct{})
-	eventbus := NewChannelEventBus(
-		subscriptionChan, 
-		publishChan,
-		func() chan Event { return eventChan },
-		func() chan struct{} { return cancelChan },
-	)
-	handle, err := eventbus.Subscribe(ByEventTypes(
-		E_TestEvent,
-		))
+	eventbus := NewMockEventBus().Create()
+	handle, err := eventbus.Subscribe(ByEventTypes(E_TestEvent))
 	if err != nil {
 		t.Errorf("Should not return error from subscribe [ %s ]\n")
 		return

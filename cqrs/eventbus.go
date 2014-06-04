@@ -54,6 +54,9 @@ func (filter *eventTypesFilter) Predicate(event Event) bool {
 }
 
 func ByEventTypes(eventTypes ...uint32) EventFilterer {
+	if len(eventTypes) == 0 {
+		return nil
+	}
 	return &eventTypesFilter {
 		eventTypes: eventTypes,
 	}
