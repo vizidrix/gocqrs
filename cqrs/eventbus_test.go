@@ -35,7 +35,7 @@ func (mock *MockEventBus) Create() EventRouter {
 		mock.UnSubscriptionChan,
 		mock.PublishChan,
 		func() chan Event { return mock.EventChan },
-		func() chan struct{} { return mock.CancelChan },
+		//func() chan struct{} { return mock.CancelChan },
 	)
 }
 
@@ -197,16 +197,10 @@ func Test_Should_stop_receiving_matching_event_when_canceled(t *testing.T) {
 	eventbus := NewMockEventBus().Create()
 	handle, _ := eventbus.Subscribe(ByEventTypes(E_TestEvent))
 	eventbus.Step()
-	if err := eventbus.UnSubscribe(handle); err != nil {
-		t.Errorf("Should not return error from unsubscribe")
-		return
-	}
-	//eventbus.Step()
+	eventbus.UnSubscribe(handle)
+	eventbus.Step()
 	event := NewTestEvent(1, 1, "publish test")
-	if err := eventbus.Publish(event); err != nil {
-		t.Errorf("Should not return error from publish [ %s ]\n", err)
-		return
-	}
+	eventbus.Publish(event)
 	eventbus.Step()
 	select {
 		case actual := <-handle.EventChan(): {

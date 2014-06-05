@@ -37,9 +37,9 @@ type Subscriber interface {
 type EventRouter interface {
 	Listen() // Iterates across the Step function in a goroutine loop
 	Step()	// Grabs the next operation from the queue and processs it
-	Publish(event Event) (error)
-	Subscribe(filter EventFilterer) (Subscriber, error)
-	UnSubscribe(subscriber Subscriber) (error)
+	Publish(event Event) (error) // Pushes a copy of the event to all relevant subscribers
+	Subscribe(filter EventFilterer) (Subscriber, error) // Registers a subscriber using it's filter
+	UnSubscribe(subscriber Subscriber) (error) // UnRegisters a subscriber from receiving events
 }
 
 type eventTypesFilter struct {
@@ -86,14 +86,10 @@ func ByAggregateIds(aggregateIds ...uint64) EventFilterer {
 	}
 }
 
-
 type subscription struct {
-	//TypeFilter []uint32
 	eventBus EventRouter
 	filter EventFilterer
 	eventChan  chan Event
-	//cancelChan chan struct{}
-	//EventTypes []uint32
 }
 
 func (s *subscription) EventChan() <-chan Event {
@@ -119,7 +115,7 @@ type channelEventBus struct {
 	publishChan chan Event
 	subscriptions []Subscriber
 	eventChanFactory EventChanFactory
-	cancelChanFactory CancelChanFactory
+	//cancelChanFactory CancelChanFactory
 }
 
 func NewDefaultedEventBus() *channelEventBus {
@@ -128,7 +124,7 @@ func NewDefaultedEventBus() *channelEventBus {
 		make(chan Subscriber),
 		make(chan Event),
 		func() chan Event { return make(chan Event)},
-		func() chan struct{} { return make(chan struct{})},
+		//func() chan struct{} { return make(chan struct{})},
 		)
 }
 
@@ -140,14 +136,15 @@ func NewChannelEventBus(
 	unsubscriptionChan chan Subscriber,
 	publishChan chan Event,
 	eventChanFactory EventChanFactory,
-	cancelChanFactory CancelChanFactory) *channelEventBus {
+	//cancelChanFactory CancelChanFactory,
+	) *channelEventBus {
 	bus := &channelEventBus {
 		subscribeChan: subscriptionChan,
 		unsubscribeChan: unsubscriptionChan,
 		publishChan: publishChan,
 		subscriptions: make([]Subscriber, 0, 10),
 		eventChanFactory: eventChanFactory,
-		cancelChanFactory: cancelChanFactory,
+		//cancelChanFactory: cancelChanFactory,
 	}
 	return bus
 }
@@ -163,11 +160,9 @@ func (c *channelEventBus) Listen() {
 func (c *channelEventBus) Step() {
 	select { // Synchronized select for event bus mutable actions
 	case subscription := <-c.subscribeChan: {
-		//fmt.Printf("Subscribe [ %s ]\n", subscription)
 		c.subscriptions = append(c.subscriptions, subscription)
 	}
 	case subscription := <-c.unsubscribeChan: {
-		//fmt.Printf("Unsubscribe [ %s ]\n", subscription)
 		for index, s := range c.subscriptions {
 			if subscription == s {
 				c.subscriptions = append(c.subscriptions[:index], c.subscriptions[index+1:]...)
@@ -175,19 +170,10 @@ func (c *channelEventBus) Step() {
 		}
 	}
 	case event := <- c.publishChan: {
-		//fmt.Printf("Publish [ %s ]\n", event)
 		for _, subscription := range c.subscriptions {
 			if subscription.Filter().Predicate(event) {
 				subscription.Publish(event)
-				//subscription.EventChan <- event
 			}
-			/*
-			for _, eventType := range subscription.TypeFilter {
-				if eventType == event.GetEventType() {
-					subscription.EventChan <- event
-				}
-			}
-			*/
 		}
 	}
 	}
@@ -205,16 +191,7 @@ func (c *channelEventBus) Publish(event Event) (error) {
 	return nil
 }
 
-/*
-func (c *channelEventBus) Subscribe(eventFilters ...EventPredicate) (*Subscription, error) {
-	var compositeFilter := NewCompositeFilter(eventFilters...)
-
-	return 
-}
-*/
-
 func (c *channelEventBus) Subscribe(filter EventFilterer) (Subscriber, error) {
-	//fmt.Printf("Subscribed to ChannelEventBus with\t%x\n", filter)
 	if filter == nil {
 		return nil, ErrInvalidNilTypeFilter	
 	}
@@ -222,7 +199,6 @@ func (c *channelEventBus) Subscribe(filter EventFilterer) (Subscriber, error) {
 		eventBus: c,
 		filter: filter,
 		eventChan: c.eventChanFactory(),
-		//cancelChan: c.cancelChanFactory(),
 	}
 	c.subscribeChan <- handle
 	return handle, nil
@@ -232,65 +208,6 @@ func (c *channelEventBus) UnSubscribe(subscription Subscriber) (error) {
 	if subscription == nil {
 		return ErrInvalidNilUnSubscribe
 	}
-	//ErrInvalidUnSubscribe
 	c.unsubscribeChan <- subscription
 	return nil
 }
-
-/*
-func (c *channelEventBus) Subscribe(typeFilter []uint32) (*Subscription, error) {
-	fmt.Printf("Subscribed to ChannelEventBus with\n%#x\n", typeFilter)
-	if typeFilter == nil {
-		return nil, ErrInvalidNilTypeFilter
-	}
-	if len(typeFilter) == 0 {
-		return nil, ErrInvalidEmptyTypeFilter
-	}
-	handle := &Subscription {
-		TypeFilter: typeFilter,
-		EventChan: make(chan Event),
-		CancelChan: make(chan struct{}),
-	}
-	c.subscribeChan <- handle
-	return handle, nil
-}
-*/
-
-/*
-
-type EventSubscriptionService struct {
-	Subscriptions map[uint32][]chan Event
-}
-
-func NewEventSubscriptionService() EventSubscriptionService {
-	return EventSubscriptionService{
-		Subscriptions: make(map[uint32][]chan Event),
-	}
-}
-
-
-
-func NewEventSubscription(eventchan chan Event, eventtypes []uint32) EventSubscription {
-	return EventSubscription{
-		EventChan:  eventchan,
-		EventTypes: eventtypes,
-	}
-}
-
-func (eventsubscriptions *EventSubscriptionService) BusEvents(eventbus <-chan Event, subscriberbus <-chan EventSubscription) {
-	for {
-		select {
-		case event := <-eventbus:
-			fmt.Printf("\nEvent Bus: %v", event)
-			for _, listener := range eventsubscriptions.Subscriptions[event.GetEventType()] {
-				listener <- event
-			}
-		case subscription := <-subscriberbus:
-			for _, eventtype := range subscription.EventTypes {
-				eventsubscriptions.Subscriptions[eventtype] = append(eventsubscriptions.Subscriptions[eventtype], subscription.EventChan)
-			}
-		}
-	}
-}
-
-*/
