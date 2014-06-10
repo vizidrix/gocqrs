@@ -36,7 +36,7 @@ type Subscriber interface {
 // EventRouter provides the abstraction over a bus for clients to connect against
 type EventRouter interface {
 	Listen() // Iterates across the Step function in a goroutine loop
-	Step()	// Grabs the next operation from the queue and processs it
+	Step()	// Grabs the next operation from the queue and processes it
 	Publish(event Event) (error) // Pushes a copy of the event to all relevant subscribers
 	Subscribe(filter EventFilterer) (Subscriber, error) // Registers a subscriber using it's filter
 	UnSubscribe(subscriber Subscriber) (error) // UnRegisters a subscriber from receiving events

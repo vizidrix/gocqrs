@@ -30,7 +30,7 @@ type Aggregate interface {
 type AggregateMemento struct {
 	Domain  uint32 `json:"__domain"`  // Aggregate Domain
 	Id      uint64 `json:"__id"`      // Aggregate Id
-	Version uint32  `json:"__version"` // Aggregate Version
+	Version uint32 `json:"__version"` // Aggregate Version
 }
 
 func NewAggregate(domain uint32, id uint64, version uint32) AggregateMemento {
