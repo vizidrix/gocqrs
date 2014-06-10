@@ -2,30 +2,30 @@ package cqrs_test
 
 import (
 	//"fmt"
-	"testing"
 	. "github.com/vizidrix/gocqrs/cqrs"
+	"testing"
 )
 
 var (
-	DOMAIN uint32 = 0x11111111
+	DOMAIN      uint32 = 0x11111111
 	E_TestEvent uint32 = E(1, 1)
 )
 
 type MockEventBus struct {
-	SubscriptionChan chan Subscriber
+	SubscriptionChan   chan Subscriber
 	UnSubscriptionChan chan Subscriber
-	PublishChan chan Event
-	EventChan chan Event
-	CancelChan chan struct{}
+	PublishChan        chan Event
+	EventChan          chan Event
+	CancelChan         chan struct{}
 }
 
 func NewMockEventBus() *MockEventBus {
-	return &MockEventBus {
-		SubscriptionChan: make(chan Subscriber, 1),
+	return &MockEventBus{
+		SubscriptionChan:   make(chan Subscriber, 1),
 		UnSubscriptionChan: make(chan Subscriber, 1),
-		PublishChan: make(chan Event, 1),
-		EventChan: make(chan Event, 1),
-		CancelChan: make(chan struct{}),
+		PublishChan:        make(chan Event, 1),
+		EventChan:          make(chan Event, 1),
+		CancelChan:         make(chan struct{}),
 	}
 }
 
@@ -38,7 +38,7 @@ func (mock *MockEventBus) Create() EventRouter {
 	)
 }
 
-type MockSubscriber struct {}
+type MockSubscriber struct{}
 
 func (mock *MockSubscriber) EventChan() <-chan Event {
 	return nil
@@ -62,9 +62,9 @@ type TestEvent struct {
 }
 
 func NewTestEvent(id uint64, version uint32, value string) TestEvent {
-	return TestEvent {
+	return TestEvent{
 		EventMemento: NewEvent(DOMAIN, id, version, E_TestEvent),
-		Value: value,
+		Value:        value,
 	}
 }
 
@@ -112,7 +112,7 @@ func Test_Should_filter_matching_events_ByAggregateIds(t *testing.T) {
 
 func Test_Should_return_false_for_unmatched_events_ByEventType(t *testing.T) {
 	event := NewTestEvent(1, 1, "Test")
-	filter := ByEventTypes(E_TestEvent+1)
+	filter := ByEventTypes(E_TestEvent + 1)
 
 	if filter.Predicate(event) {
 		t.Errorf("Expected filter ByEventType for [ %d ] with [ %d ] to return false", 10, event.GetEventType())
@@ -174,12 +174,14 @@ func Test_Should_receive_matching_event_when_published(t *testing.T) {
 	eventbus.Publish(expected)
 	eventbus.Step()
 	select {
-		case actual := <-handle.EventChan(): {
+	case actual := <-handle.EventChan():
+		{
 			if expected != actual {
 				t.Errorf("\nExpected\t[ %v ]\n\tbut was\t[ %v ]\n", expected, actual)
 			}
 		}
-		default: {
+	default:
+		{
 			t.Errorf("Should not have hit default case\n")
 		}
 	}
@@ -202,11 +204,12 @@ func Test_Should_stop_receiving_matching_event_when_canceled(t *testing.T) {
 	eventbus.Publish(event)
 	eventbus.Step()
 	select {
-		case actual := <-handle.EventChan(): {
+	case actual := <-handle.EventChan():
+		{
 			t.Errorf("\nExpected subscription cancel but got\t[ %v ]\n", actual)
 		}
-		default: { // Should not have published to this subscriber
+	default:
+		{ // Should not have published to this subscriber
 		}
 	}
 }
-

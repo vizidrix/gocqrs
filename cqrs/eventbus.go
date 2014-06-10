@@ -6,21 +6,23 @@ import (
 )
 
 var (
-	ErrInvalidEventBusState = errors.New("Event bus not properly initialized")
-	ErrInvalidNilTypeFilter = errors.New("Cannot subscribe with nil type filter")
-	ErrInvalidEmptyTypeFilter = errors.New("Cannot subscribe with an empty type filter")
+	ErrInvalidEventBusState     = errors.New("Event bus not properly initialized")
+	ErrInvalidNilTypeFilter     = errors.New("Cannot subscribe with nil type filter")
+	ErrInvalidEmptyTypeFilter   = errors.New("Cannot subscribe with an empty type filter")
 	ErrInvalidNilPublishedEvent = errors.New("Cannot publish a nil event")
-	ErrInvalidNilUnSubscribe = errors.New("Cannot unsubscribe a nil subscriber")
-	ErrInvalidUnSubscribe = errors.New("Cannot unsubscribe an invalid subscriber")
+	ErrInvalidNilUnSubscribe    = errors.New("Cannot unsubscribe a nil subscriber")
+	ErrInvalidUnSubscribe       = errors.New("Cannot unsubscribe an invalid subscriber")
 )
 
 var EventBus EventRouter
 
+/*
 func init() {
 	// Auto init the event bus as a global service
 	EventBus = NewDefaultedEventBus()
 	EventBus.Listen()
 }
+*/
 
 type EventChanFactory func() chan Event
 type CancelChanFactory func() chan struct{}
@@ -38,11 +40,11 @@ type Subscriber interface {
 
 // EventRouter provides the abstraction over a bus for clients to connect against
 type EventRouter interface {
-	Listen() // Iterates across the Step function in a goroutine loop
-	Step()	// Grabs the next operation from the queue and processes it
-	Publish(event Event) (error) // Pushes a copy of the event to all relevant subscribers
+	Listen()                                            // Iterates across the Step function in a goroutine loop
+	Step()                                              // Grabs the next operation from the queue and processes it
+	Publish(event Event) error                          // Pushes a copy of the event to all relevant subscribers
 	Subscribe(filter EventFilterer) (Subscriber, error) // Registers a subscriber using it's filter
-	UnSubscribe(subscriber Subscriber) (error) // UnRegisters a subscriber from receiving events
+	UnSubscribe(subscriber Subscriber) error            // UnRegisters a subscriber from receiving events
 }
 
 type eventTypesFilter struct {
@@ -62,7 +64,7 @@ func ByEventTypes(eventTypes ...uint32) EventFilterer {
 	if len(eventTypes) == 0 {
 		return nil
 	}
-	return &eventTypesFilter {
+	return &eventTypesFilter{
 		eventTypes: eventTypes,
 	}
 }
@@ -84,15 +86,15 @@ func ByAggregateIds(aggregateIds ...uint64) EventFilterer {
 	if len(aggregateIds) == 0 {
 		return nil
 	}
-	return &aggregateIdsFilter {
+	return &aggregateIdsFilter{
 		aggregateIds: aggregateIds,
 	}
 }
 
 type subscription struct {
-	eventBus EventRouter
-	filter EventFilterer
-	eventChan  chan Event
+	eventBus  EventRouter
+	filter    EventFilterer
+	eventChan chan Event
 }
 
 func (s *subscription) EventChan() <-chan Event {
@@ -113,10 +115,10 @@ func (s *subscription) Cancel() {
 
 // EventRouter implementation that uses Go chans to provide routing
 type channelEventBus struct {
-	subscribeChan chan Subscriber
-	unsubscribeChan chan Subscriber
-	publishChan chan Event
-	subscriptions []Subscriber
+	subscribeChan    chan Subscriber
+	unsubscribeChan  chan Subscriber
+	publishChan      chan Event
+	subscriptions    []Subscriber
 	eventChanFactory EventChanFactory
 }
 
@@ -125,8 +127,8 @@ func NewDefaultedEventBus() *channelEventBus {
 		make(chan Subscriber),
 		make(chan Subscriber),
 		make(chan Event),
-		func() chan Event { return make(chan Event)},
-		)
+		func() chan Event { return make(chan Event) },
+	)
 }
 
 func NewChannelEventBus(
@@ -134,12 +136,12 @@ func NewChannelEventBus(
 	unsubscriptionChan chan Subscriber,
 	publishChan chan Event,
 	eventChanFactory EventChanFactory,
-	) *channelEventBus {
-	bus := &channelEventBus {
-		subscribeChan: subscriptionChan,
-		unsubscribeChan: unsubscriptionChan,
-		publishChan: publishChan,
-		subscriptions: make([]Subscriber, 0, 10),
+) *channelEventBus {
+	bus := &channelEventBus{
+		subscribeChan:    subscriptionChan,
+		unsubscribeChan:  unsubscriptionChan,
+		publishChan:      publishChan,
+		subscriptions:    make([]Subscriber, 0, 10),
 		eventChanFactory: eventChanFactory,
 	}
 	return bus
@@ -147,23 +149,26 @@ func NewChannelEventBus(
 
 func (c *channelEventBus) Step() {
 	select { // Synchronized select for event bus mutable actions
-	case subscription := <-c.subscribeChan: {
-		c.subscriptions = append(c.subscriptions, subscription)
-	}
-	case subscription := <-c.unsubscribeChan: {
-		for index, s := range c.subscriptions {
-			if subscription == s {
-				c.subscriptions = append(c.subscriptions[:index], c.subscriptions[index+1:]...)
+	case subscription := <-c.subscribeChan:
+		{
+			c.subscriptions = append(c.subscriptions, subscription)
+		}
+	case subscription := <-c.unsubscribeChan:
+		{
+			for index, s := range c.subscriptions {
+				if subscription == s {
+					c.subscriptions = append(c.subscriptions[:index], c.subscriptions[index+1:]...)
+				}
 			}
 		}
-	}
-	case event := <- c.publishChan: {
-		for _, subscription := range c.subscriptions {
-			if subscription.Filter().Predicate(event) {
-				subscription.Publish(event)
+	case event := <-c.publishChan:
+		{
+			for _, subscription := range c.subscriptions {
+				if subscription.Filter().Predicate(event) {
+					subscription.Publish(event)
+				}
 			}
 		}
-	}
 	}
 }
 
@@ -175,13 +180,13 @@ func (c *channelEventBus) Listen() {
 	}()
 }
 
-func (c *channelEventBus) Publish(event Event) (error) {
-	if (event == nil) {
+func (c *channelEventBus) Publish(event Event) error {
+	if event == nil {
 		return ErrInvalidNilPublishedEvent
 	}
 	select {
 	case c.publishChan <- event:
-	default: 
+	default:
 		return ErrInvalidEventBusState
 	}
 	return nil
@@ -189,18 +194,18 @@ func (c *channelEventBus) Publish(event Event) (error) {
 
 func (c *channelEventBus) Subscribe(filter EventFilterer) (Subscriber, error) {
 	if filter == nil {
-		return nil, ErrInvalidNilTypeFilter	
+		return nil, ErrInvalidNilTypeFilter
 	}
-	handle := &subscription {
-		eventBus: c,
-		filter: filter,
+	handle := &subscription{
+		eventBus:  c,
+		filter:    filter,
 		eventChan: c.eventChanFactory(),
 	}
 	c.subscribeChan <- handle
 	return handle, nil
 }
 
-func (c *channelEventBus) UnSubscribe(subscription Subscriber) (error) {
+func (c *channelEventBus) UnSubscribe(subscription Subscriber) error {
 	if subscription == nil {
 		return ErrInvalidNilUnSubscribe
 	}
