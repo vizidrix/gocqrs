@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	ErrInvalidBusState = errors.New("Bus not properly initialized")
+	ErrInvalidEventBusState = errors.New("Event bus not properly initialized")
 	ErrInvalidNilTypeFilter = errors.New("Cannot subscribe with nil type filter")
 	ErrInvalidEmptyTypeFilter = errors.New("Cannot subscribe with an empty type filter")
 	ErrInvalidNilPublishedEvent = errors.New("Cannot publish a nil event")
@@ -21,6 +21,9 @@ func init() {
 	EventBus = NewDefaultedEventBus()
 	EventBus.Listen()
 }
+
+type EventChanFactory func() chan Event
+type CancelChanFactory func() chan struct{}
 
 type EventFilterer interface {
 	Predicate(event Event) bool
@@ -115,7 +118,6 @@ type channelEventBus struct {
 	publishChan chan Event
 	subscriptions []Subscriber
 	eventChanFactory EventChanFactory
-	//cancelChanFactory CancelChanFactory
 }
 
 func NewDefaultedEventBus() *channelEventBus {
@@ -124,19 +126,14 @@ func NewDefaultedEventBus() *channelEventBus {
 		make(chan Subscriber),
 		make(chan Event),
 		func() chan Event { return make(chan Event)},
-		//func() chan struct{} { return make(chan struct{})},
 		)
 }
-
-type EventChanFactory func() chan Event
-type CancelChanFactory func() chan struct{}
 
 func NewChannelEventBus(
 	subscriptionChan chan Subscriber,
 	unsubscriptionChan chan Subscriber,
 	publishChan chan Event,
 	eventChanFactory EventChanFactory,
-	//cancelChanFactory CancelChanFactory,
 	) *channelEventBus {
 	bus := &channelEventBus {
 		subscribeChan: subscriptionChan,
@@ -144,17 +141,8 @@ func NewChannelEventBus(
 		publishChan: publishChan,
 		subscriptions: make([]Subscriber, 0, 10),
 		eventChanFactory: eventChanFactory,
-		//cancelChanFactory: cancelChanFactory,
 	}
 	return bus
-}
-
-func (c *channelEventBus) Listen() {
-	go func() {
-		for {
-			c.Step()
-		}
-	}()
 }
 
 func (c *channelEventBus) Step() {
@@ -179,6 +167,14 @@ func (c *channelEventBus) Step() {
 	}
 }
 
+func (c *channelEventBus) Listen() {
+	go func() {
+		for {
+			c.Step()
+		}
+	}()
+}
+
 func (c *channelEventBus) Publish(event Event) (error) {
 	if (event == nil) {
 		return ErrInvalidNilPublishedEvent
@@ -186,7 +182,7 @@ func (c *channelEventBus) Publish(event Event) (error) {
 	select {
 	case c.publishChan <- event:
 	default: 
-		return ErrInvalidBusState
+		return ErrInvalidEventBusState
 	}
 	return nil
 }
