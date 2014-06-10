@@ -35,7 +35,6 @@ func (mock *MockEventBus) Create() EventRouter {
 		mock.UnSubscriptionChan,
 		mock.PublishChan,
 		func() chan Event { return mock.EventChan },
-		//func() chan struct{} { return mock.CancelChan },
 	)
 }
 
