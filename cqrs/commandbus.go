@@ -6,7 +6,7 @@ import (
 
 var (
 	ErrInvalidCommandBusState     = errors.New("Command bus not properly initialized")
-	ErrInvalidNilRegister         = errors.New("Cannot register nil command type set")
+	ErrInvalidDomainRegistered    = errors.New("Cannot register nil command type set")
 	ErrDuplicateRegistration      = errors.New("Cannot register duplicate command type handlers")
 	ErrInvalidNilPublishedCommand = errors.New("Cannot publish a nil command")
 )
@@ -64,14 +64,14 @@ type channelCommandBus struct {
 
 func NewDefaultedCommandBus() *channelCommandBus {
 	return NewChannelCommandBus(
-		make(chan uint32),
+		make(chan CommandHandler),
 		make(chan Command),
 		func() chan Command { return make(chan Command) },
 	)
 }
 
 func NewChannelCommandBus(
-	registerChan chan uint32,
+	registerChan chan CommandHandler,
 	publishChan chan Command,
 	commandChanFactory CommandChanFactory,
 ) *channelCommandBus {
@@ -94,10 +94,12 @@ func (c *channelCommandBus) Step() {
 		}
 	case command := <-c.publishChan:
 		{
-			c.registrations[command.GetDomain()] <- command
+			handler := c.registrations[command.GetDomain()]
+			handler.Publish(command)
 		}
 	}
 }
+
 func (c *channelCommandBus) Listen() {
 	go func() {
 		for {
@@ -111,7 +113,7 @@ func (c *channelCommandBus) Publish(command Command) error {
 		return ErrInvalidNilPublishedCommand
 	}
 	select {
-	case c.publishChan <- event:
+	case c.publishChan <- command:
 	default:
 		return ErrInvalidCommandBusState
 	}
@@ -120,10 +122,10 @@ func (c *channelCommandBus) Publish(command Command) error {
 
 func (c *channelCommandBus) Register(domain uint32) (CommandHandler, error) {
 	if domain == 0 {
-		return nil, ErrInvalidNilRegister
+		return nil, ErrInvalidDomainRegistered
 	}
 	handle := &registration{
-		commandBus:  CommandRouter,
+		commandBus:  c,
 		commandChan: c.commandChanFactory(),
 		domain:      domain,
 	}

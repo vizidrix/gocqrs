@@ -71,6 +71,7 @@ func (eventstore *MemoryEventStore) ReadAggregateEventsFromSnapshot(domain uint3
 	}
 	return matching, nil
 }
+
 /*
 type EventStorer interface {
 	StoreEvent(event Event)
