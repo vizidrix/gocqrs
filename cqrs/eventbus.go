@@ -8,10 +8,13 @@ import (
 var (
 	ErrInvalidEventBusState     = errors.New("Event bus not properly initialized")
 	ErrInvalidNilTypeFilter     = errors.New("Cannot subscribe with nil type filter")
+	ErrInvalidSubscribeDomain   = errors.New("Cannot subscribe with an invalid domain")
 	ErrInvalidEmptyTypeFilter   = errors.New("Cannot subscribe with an empty type filter")
 	ErrInvalidNilPublishedEvent = errors.New("Cannot publish a nil event")
+	ErrInvalidPublishDomain     = errors.New("Cannot publish to an invalid domain")
 	ErrInvalidNilUnSubscribe    = errors.New("Cannot unsubscribe a nil subscriber")
 	ErrInvalidUnSubscribe       = errors.New("Cannot unsubscribe an invalid subscriber")
+	ErrInvalidUnSubscribeDomain = errors.New("Cannot unsubscribe with an invalid domain")
 )
 
 var EventBus EventRouter
@@ -34,17 +37,19 @@ type EventFilterer interface {
 type Subscriber interface {
 	EventChan() <-chan Event
 	Publish(event Event)
+	Domain() uint32
 	Filter() EventFilterer
 	Cancel()
 }
 
 // EventRouter provides the abstraction over a bus for clients to connect against
 type EventRouter interface {
-	Listen()                                            // Iterates across the Step function in a goroutine loop
-	Step()                                              // Grabs the next operation from the queue and processes it
-	Publish(event Event) error                          // Pushes a copy of the event to all relevant subscribers
-	Subscribe(filter EventFilterer) (Subscriber, error) // Registers a subscriber using it's filter
-	UnSubscribe(subscriber Subscriber) error            // UnRegisters a subscriber from receiving events
+	Listen()                                                           // Iterates across the Step function in a goroutine loop
+	Step()                                                             // Grabs the next operation from the queue and processes it
+	Publish(event Event) error                                         // Pushes a copy of the event to all relevant subscribers
+	ValidateDomain(domain uint32) bool                                 //Returns a boolean of whether a domain is active in the bus
+	Subscribe(domain uint32, filter EventFilterer) (Subscriber, error) // Registers a subscriber using it's filter
+	UnSubscribe(subscriber Subscriber) error                           // UnRegisters a subscriber from receiving events
 }
 
 type eventTypesFilter struct {
@@ -93,6 +98,7 @@ func ByAggregateIds(aggregateIds ...uint64) EventFilterer {
 
 type subscription struct {
 	eventBus  EventRouter
+	domain    uint32
 	filter    EventFilterer
 	eventChan chan Event
 }
@@ -103,6 +109,10 @@ func (s *subscription) EventChan() <-chan Event {
 
 func (s *subscription) Publish(event Event) {
 	s.eventChan <- event
+}
+
+func (s *subscription) Domain() uint32 {
+	return s.domain
 }
 
 func (s *subscription) Filter() EventFilterer {
@@ -118,7 +128,7 @@ type channelEventBus struct {
 	subscribeChan    chan Subscriber
 	unsubscribeChan  chan Subscriber
 	publishChan      chan Event
-	subscriptions    []Subscriber
+	subscriptions    map[uint32][]Subscriber
 	eventChanFactory EventChanFactory
 }
 
@@ -141,7 +151,7 @@ func NewChannelEventBus(
 		subscribeChan:    subscriptionChan,
 		unsubscribeChan:  unsubscriptionChan,
 		publishChan:      publishChan,
-		subscriptions:    make([]Subscriber, 0, 10),
+		subscriptions:    make(map[uint32][]Subscriber),
 		eventChanFactory: eventChanFactory,
 	}
 	return bus
@@ -151,19 +161,34 @@ func (c *channelEventBus) Step() {
 	select { // Synchronized select for event bus mutable actions
 	case subscription := <-c.subscribeChan:
 		{
-			c.subscriptions = append(c.subscriptions, subscription)
+			if c.subscriptions[subscription.Domain()] == nil {
+				c.subscriptions[subscription.Domain()] = make([]Subscriber, 0, 10)
+			}
+			c.subscriptions[subscription.Domain()] = append(c.subscriptions[subscription.Domain()], subscription)
 		}
 	case subscription := <-c.unsubscribeChan:
 		{
-			for index, s := range c.subscriptions {
+			if c.subscriptions[subscription.Domain()] == nil {
+				panic(ErrInvalidUnSubscribeDomain)
+			}
+			for index, s := range c.subscriptions[subscription.Domain()] {
 				if subscription == s {
-					c.subscriptions = append(c.subscriptions[:index], c.subscriptions[index+1:]...)
+					c.subscriptions[subscription.Domain()] = append(
+						c.subscriptions[subscription.Domain()][:index],
+						c.subscriptions[subscription.Domain()][index+1:]...,
+					)
 				}
 			}
 		}
 	case event := <-c.publishChan:
 		{
-			for _, subscription := range c.subscriptions {
+			if c.subscriptions[event.GetDomain()] == nil {
+				/*
+					panic(ErrInvalidPublishDomain)
+				*/
+				break
+			}
+			for _, subscription := range c.subscriptions[event.GetDomain()] {
 				if subscription.Filter().Predicate(event) {
 					subscription.Publish(event)
 				}
@@ -184,6 +209,12 @@ func (c *channelEventBus) Publish(event Event) error {
 	if event == nil {
 		return ErrInvalidNilPublishedEvent
 	}
+
+	/*
+		if !c.ValidateDomain(event.GetDomain()) {
+			return ErrInvalidPublishDomain
+		}
+	*/
 	select {
 	case c.publishChan <- event:
 	default:
@@ -192,12 +223,23 @@ func (c *channelEventBus) Publish(event Event) error {
 	return nil
 }
 
-func (c *channelEventBus) Subscribe(filter EventFilterer) (Subscriber, error) {
+func (c *channelEventBus) ValidateDomain(domain uint32) bool {
+	if _, active := c.subscriptions[domain]; !active {
+		return false
+	}
+	return true
+}
+
+func (c *channelEventBus) Subscribe(domain uint32, filter EventFilterer) (Subscriber, error) {
+	if domain == 0 {
+		return nil, ErrInvalidSubscribeDomain
+	}
 	if filter == nil {
 		return nil, ErrInvalidNilTypeFilter
 	}
 	handle := &subscription{
 		eventBus:  c,
+		domain:    domain,
 		filter:    filter,
 		eventChan: c.eventChanFactory(),
 	}
@@ -208,6 +250,10 @@ func (c *channelEventBus) Subscribe(filter EventFilterer) (Subscriber, error) {
 func (c *channelEventBus) UnSubscribe(subscription Subscriber) error {
 	if subscription == nil {
 		return ErrInvalidNilUnSubscribe
+	}
+
+	if !c.ValidateDomain(subscription.Domain()) {
+		return ErrInvalidUnSubscribeDomain
 	}
 	c.unsubscribeChan <- subscription
 	return nil
