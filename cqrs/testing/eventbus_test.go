@@ -37,7 +37,7 @@ func (mock *MockEventBus) Create() EventRouter {
 	)
 }
 
-type MockSubscriber struct{}
+type MockSubscriber uint32
 
 func (mock *MockSubscriber) EventChan() <-chan Event {
 	return nil
@@ -48,7 +48,7 @@ func (mock *MockSubscriber) Publish(event Event) {
 }
 
 func (mock *MockSubscriber) Domain() uint32 {
-	return DOMAIN
+	return uint32(*mock)
 }
 
 func (mock *MockSubscriber) Filter() EventFilterer {
