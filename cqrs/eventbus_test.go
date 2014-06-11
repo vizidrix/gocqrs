@@ -6,8 +6,8 @@ import (
 )
 
 var (
-	DOMAIN      uint32 = 0x11111111
-	E_TestEvent uint32 = E(1, 1)
+	E_TEST_DOMAIN uint32 = 0x11111111
+	E_TestEvent   uint64 = E(E_TEST_DOMAIN, 1, 1)
 )
 
 type MockEventBus struct {
@@ -37,18 +37,10 @@ func (mock *MockEventBus) Create() EventRouter {
 	)
 }
 
-type MockSubscriber uint32
+type MockSubscriber struct{}
 
 func (mock *MockSubscriber) EventChan() <-chan Event {
 	return nil
-}
-
-func (mock *MockSubscriber) Publish(event Event) {
-	return
-}
-
-func (mock *MockSubscriber) Domain() uint32 {
-	return uint32(*mock)
 }
 
 func (mock *MockSubscriber) Filter() EventFilterer {
@@ -66,7 +58,7 @@ type TestEvent struct {
 
 func NewTestEvent(id uint64, version uint32, value string) TestEvent {
 	return TestEvent{
-		EventMemento: NewEvent(DOMAIN, id, version, E_TestEvent),
+		EventMemento: NewEvent(id, version, E_TestEvent),
 		Value:        value,
 	}
 }
@@ -133,7 +125,7 @@ func Test_Should_return_false_for_unmatched_events_ByAggregateIds(t *testing.T) 
 
 func Test_Should_return_an_error_on_nil_filter(t *testing.T) {
 	eventbus := NewMockEventBus().Create()
-	_, err := eventbus.Subscribe(DOMAIN, nil)
+	_, err := eventbus.Subscribe(nil)
 
 	if err != ErrInvalidNilTypeFilter {
 		t.Errorf("Should have returned an error for nil type filter but was [ %v ]\n", err)
@@ -142,7 +134,7 @@ func Test_Should_return_an_error_on_nil_filter(t *testing.T) {
 
 func Test_Should_return_subscription_token_for_valid_filter_set(t *testing.T) {
 	eventbus := NewMockEventBus().Create()
-	handle, err := eventbus.Subscribe(DOMAIN, ByEventTypes(10))
+	handle, err := eventbus.Subscribe(ByEventTypes(10))
 
 	if err != nil {
 		t.Errorf("Should not have err but was [ %s ]\n", err)
@@ -172,7 +164,7 @@ func Test_Should_not_return_error_from_valid_event_publish(t *testing.T) {
 
 func Test_Should_receive_matching_event_when_published(t *testing.T) {
 	eventbus := NewMockEventBus().Create()
-	handle, _ := eventbus.Subscribe(DOMAIN, ByEventTypes(E_TestEvent))
+	handle, _ := eventbus.Subscribe(ByEventTypes(E_TestEvent))
 	eventbus.Step()
 	expected := NewTestEvent(1, 1, "publish test")
 	eventbus.Publish(expected)
@@ -200,7 +192,7 @@ func Test_Should_return_error_when_unsubscribing_nil_subscriber(t *testing.T) {
 
 func Test_Should_stop_receiving_matching_event_when_canceled(t *testing.T) {
 	eventbus := NewMockEventBus().Create()
-	handle, _ := eventbus.Subscribe(DOMAIN, ByEventTypes(E_TestEvent))
+	handle, _ := eventbus.Subscribe(ByEventTypes(E_TestEvent))
 	eventbus.Step()
 	eventbus.UnSubscribe(handle)
 	eventbus.Step()

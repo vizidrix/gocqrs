@@ -7,7 +7,7 @@ import (
 
 var (
 	C_TEST_DOMAIN uint32 = 0x11111111
-	C_TestCommand uint32 = C(1, 2)
+	C_TestCommand uint64 = C(C_TEST_DOMAIN, 1, 1)
 )
 
 /*
@@ -79,7 +79,7 @@ type TestCommand struct {
 
 func NewTestCommand(id uint64, version uint32, value string) TestCommand {
 	return TestCommand{
-		CommandMemento: NewCommand(C_TEST_DOMAIN, id, version, C_TestCommand),
+		CommandMemento: NewCommand(id, version, C_TestCommand),
 		Value:          value,
 	}
 }

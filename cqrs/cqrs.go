@@ -8,13 +8,13 @@ import (
 
 const MESSAGE_TYPE_MASK = 0x80000000
 
-func C(version uint32, typeId uint32) uint32 {
-	return MESSAGE_TYPE_MASK | (version & 0x7FFF << 16) | (typeId & 0xFFFF)
+func C(domain uint32, version uint32, typeId uint32) uint64 {
+	return (uint64(domain) << 32) | uint64(MESSAGE_TYPE_MASK) | uint64(version&0x7FFF<<16) | uint64(typeId&0xFFFF)
 
 }
 
-func E(version uint32, typeId uint32) uint32 {
-	return (version & 0x7FFF << 16) | (typeId & 0xFFFF)
+func E(domain uint32, version uint32, typeId uint32) uint64 {
+	return (uint64(domain) << 32) | uint64(version&0x7FFF<<16) | uint64(typeId&0xFFFF)
 }
 
 type AggregateLoader interface {
@@ -58,7 +58,6 @@ func (aggregate AggregateMemento) String() string {
 }
 
 type Command interface {
-//	Aggregate
 	GetDomain() uint32
 	GetId() uint64
 	GetVersion() uint32
@@ -66,25 +65,25 @@ type Command interface {
 }
 
 type CommandMemento struct {
-	//AggregateMemento        // Aggregate
-	CommandType      uint64 `json:"__ctype"` // Command Type
-	Id      uint64 `json:"__id"`      // Aggregate Id
-	Version uint32 `json:"__version"` // Aggregate Version
+	CommandType uint64 `json:"__ctype"`   // Command Type
+	Id          uint64 `json:"__id"`      // Aggregate Id
+	Version     uint32 `json:"__version"` // Aggregate Version
 }
 
-func NewCommand(domain uint32, id uint64, version uint32, commandType uint32) CommandMemento {
+func NewCommand(id uint64, version uint32, commandType uint64) CommandMemento {
 	return CommandMemento{
-		AggregateMemento: NewAggregate(domain, id, version),
-		CommandType:      commandType,
+		CommandType: commandType,
+		Id:          id,
+		Version:     version,
 	}
 }
 
-func (command CommandMemento) GetCommandType() uint32 {
+func (command CommandMemento) GetCommandType() uint64 {
 	return command.CommandType
 }
 
 func (command CommandMemento) GetDomain() uint32 {
-	return uint32(command.CommandType >>32)
+	return uint32(command.CommandType >> 32)
 }
 
 func (command CommandMemento) GetId() uint64 {
@@ -96,11 +95,10 @@ func (command CommandMemento) GetVersion() uint32 {
 }
 
 func (command CommandMemento) String() string {
-	return fmt.Sprintf(" <C [ %s -> C[%d] ] C\\> ", command.AggregateMemento.String(), command.CommandType)
+	return fmt.Sprintf(" <C [ <A D[%d] ID[%d] V[%d] \\> -> C[%d] ] C\\> ", command.GetDomain(), command.GetId(), command.GetVersion(), command.CommandType)
 }
 
 type Event interface {
-//	Aggregate
 	GetDomain() uint32
 	GetId() uint64
 	GetVersion() uint32
@@ -108,16 +106,16 @@ type Event interface {
 }
 
 type EventMemento struct {
-//	AggregateMemento        // Aggregate
-	EventType        uint64 `json:"__etype"` // Event Type
-	Id      uint64 `json:"__id"`      // Aggregate Id
-	Version uint32 `json:"__version"` // Aggregate Version
+	EventType uint64 `json:"__etype"`   // Event Type
+	Id        uint64 `json:"__id"`      // Aggregate Id
+	Version   uint32 `json:"__version"` // Aggregate Version
 }
 
-func NewEvent(domain uint32, id uint64, version uint32, eventType uint32) EventMemento {
+func NewEvent(id uint64, version uint32, eventType uint64) EventMemento {
 	return EventMemento{
-		AggregateMemento: NewAggregate(domain, id, version),
-		EventType:        eventType,
+		EventType: eventType,
+		Id:        id,
+		Version:   version,
 	}
 }
 
@@ -126,7 +124,7 @@ func (event EventMemento) GetEventType() uint64 {
 }
 
 func (event EventMemento) GetDomain() uint32 {
-	return uint32(event.EventType >>32)
+	return uint32(event.EventType >> 32)
 }
 
 func (event EventMemento) GetId() uint64 {
@@ -138,5 +136,5 @@ func (event EventMemento) GetVersion() uint32 {
 }
 
 func (event EventMemento) String() string {
-	return fmt.Sprintf(" <E [ %s -> E[%d] ] E\\> ", event.AggregateMemento.String(), event.EventType)
+	return fmt.Sprintf(" <E [ <A D[%d] ID[%d] V[%d] \\> -> E[%d] ] E\\> ", event.GetDomain(), event.GetId(), event.GetVersion(), event.EventType)
 }

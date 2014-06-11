@@ -11,7 +11,7 @@ var (
 	ErrInvalidEmptyTypeFilter   = errors.New("Cannot subscribe with an empty type filter")
 	ErrInvalidNilPublishedEvent = errors.New("Cannot publish a nil event")
 	ErrInvalidNilUnSubscribe    = errors.New("Cannot unsubscribe a nil subscriber")
-	ErrInvalidUnSubscribe       = errors.New("Cannot unsubscribe an invalid subscriber")	
+	ErrInvalidUnSubscribe       = errors.New("Cannot unsubscribe an invalid subscriber")
 )
 
 var EventBus EventRouter
@@ -32,25 +32,22 @@ type EventFilterer interface {
 }
 
 type Subscriber interface {
-	EventChan() <-chan Event
-	Publish(event Event)
-	Domain() uint32
+	EventChan() chan Event
 	Filter() EventFilterer
 	Cancel()
 }
 
 // EventRouter provides the abstraction over a bus for clients to connect against
 type EventRouter interface {
-	Listen()                                                           // Iterates across the Step function in a goroutine loop
-	Step()                                                             // Grabs the next operation from the queue and processes it
-	Publish(event Event) error                                         // Pushes a copy of the event to all relevant subscribers
-	ValidateDomain(domain uint32) bool                                 //Returns a boolean of whether a domain is active in the bus
-	Subscribe(domain uint32, filter EventFilterer) (Subscriber, error) // Registers a subscriber using it's filter
-	UnSubscribe(subscriber Subscriber) error                           // UnRegisters a subscriber from receiving events
+	Listen()                                            // Iterates across the Step function in a goroutine loop
+	Step()                                              // Grabs the next operation from the queue and processes it
+	Publish(event Event) error                          //Returns a boolean of whether a domain is active in the bus
+	Subscribe(filter EventFilterer) (Subscriber, error) // Registers a subscriber using it's filter
+	UnSubscribe(subscriber Subscriber) error            // UnRegisters a subscriber from receiving events
 }
 
 type eventTypesFilter struct {
-	eventTypes []uint32
+	eventTypes []uint64
 }
 
 func (filter *eventTypesFilter) Predicate(event Event) bool {
@@ -62,7 +59,7 @@ func (filter *eventTypesFilter) Predicate(event Event) bool {
 	return false
 }
 
-func ByEventTypes(eventTypes ...uint32) EventFilterer {
+func ByEventTypes(eventTypes ...uint64) EventFilterer {
 	if len(eventTypes) == 0 {
 		return nil
 	}
@@ -100,12 +97,8 @@ type subscription struct {
 	eventChan chan Event
 }
 
-func (s *subscription) EventChan() <-chan Event {
+func (s *subscription) EventChan() chan Event {
 	return s.eventChan
-}
-
-func (s *subscription) Publish(event Event) {
-	s.eventChan <- event
 }
 
 func (s *subscription) Filter() EventFilterer {
@@ -114,6 +107,10 @@ func (s *subscription) Filter() EventFilterer {
 
 func (s *subscription) Cancel() {
 	s.eventBus.UnSubscribe(s)
+}
+
+func SendEvent(s Subscriber, event Event) {
+	s.EventChan() <- event
 }
 
 // EventRouter implementation that uses Go chans to provide routing
@@ -171,7 +168,7 @@ func (c *channelEventBus) Step() {
 		{
 			for _, subscription := range c.subscriptions {
 				if subscription.Filter().Predicate(event) {
-					subscription.Publish(event)
+					SendEvent(subscription, event)
 				}
 			}
 		}
