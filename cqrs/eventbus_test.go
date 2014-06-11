@@ -162,7 +162,7 @@ func Test_Should_return_error_when_publishing_nil_event(t *testing.T) {
 	}
 }
 
-func Test_Should_not_return_error_from_valid_publish(t *testing.T) {
+func Test_Should_not_return_error_from_valid_event_publish(t *testing.T) {
 	eventbus := NewMockEventBus().Create()
 	event := NewTestEvent(1, 1, "publish test")
 	if err := eventbus.Publish(event); err != nil {

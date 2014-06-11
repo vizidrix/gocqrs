@@ -1,3 +1,0 @@
-package cqrs
-
-import ()
