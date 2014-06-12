@@ -39,7 +39,7 @@ func (mock *MockEventBus) Create() EventRouter {
 
 type MockSubscriber struct{}
 
-func (mock *MockSubscriber) EventChan() <-chan Event {
+func (mock *MockSubscriber) EventChan() chan Event {
 	return nil
 }
 
@@ -49,18 +49,6 @@ func (mock *MockSubscriber) Filter() EventFilterer {
 
 func (mock *MockSubscriber) Cancel() {
 	return
-}
-
-type TestEvent struct {
-	EventMemento
-	Value string
-}
-
-func NewTestEvent(id uint64, version uint32, value string) TestEvent {
-	return TestEvent{
-		EventMemento: NewEvent(id, version, E_TestEvent),
-		Value:        value,
-	}
 }
 
 func Test_Should_filter_non_matching_events_ByEventType(t *testing.T) {

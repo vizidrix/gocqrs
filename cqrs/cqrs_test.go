@@ -7,8 +7,34 @@ import (
 )
 
 var (
-	TEST_DOMAIN uint32 = 0x11111111
+	TEST_DOMAIN   uint32 = 0x11111111
+	B_TestCommand uint64 = C(TEST_DOMAIN, 1, 1)
+	B_TestEvent   uint64 = E(TEST_DOMAIN, 1, 1)
 )
+
+type TestCommand struct {
+	CommandMemento
+	Value string
+}
+
+func NewTestCommand(id uint64, version uint32, value string) TestCommand {
+	return TestCommand{
+		CommandMemento: NewCommand(id, version, C_TestCommand),
+		Value:          value,
+	}
+}
+
+type TestEvent struct {
+	EventMemento
+	Value string
+}
+
+func NewTestEvent(id uint64, version uint32, value string) TestEvent {
+	return TestEvent{
+		EventMemento: NewEvent(id, version, E_TestEvent),
+		Value:        value,
+	}
+}
 
 func Test_Should_calculate_correct_command_key(t *testing.T) {
 	var expected = "0x1111111180010001"
@@ -28,12 +54,22 @@ func Test_Should_calculate_correct_event_key(t *testing.T) {
 	}
 }
 
-func Test_Should_return_correct_domain(t *testing.T) {
+func Test_Should_return_correct_command_domain(t *testing.T) {
 	var expected = "0x11111111"
-	var commandtype = C(TEST_DOMAIN, 1, 1)
-	var command = NewCommand(commandtype, 0, 0)
+	var command = NewCommand(0, 0, B_TestCommand)
+	var result = command.GetDomain()
 
-	if fmt.Sprintf("%#x", command.GetDomain()) != expected {
-		t.Errorf("Expected [ %s ] but received [ %#x ]\n", expected, command.GetDomain())
+	if fmt.Sprintf("%#x", result) != expected {
+		t.Errorf("Expected [ %s ] but received [ %#x ]\n", expected, result)
+	}
+}
+
+func Test_Should_return_correct_event_domain(t *testing.T) {
+	var expected = "0x11111111"
+	var event = NewEvent(0, 0, B_TestEvent)
+	var result = event.GetDomain()
+
+	if fmt.Sprintf("%#x", result) != expected {
+		t.Errorf("Expected [ %s ] but received [ %#x ]\n", expected, result)
 	}
 }

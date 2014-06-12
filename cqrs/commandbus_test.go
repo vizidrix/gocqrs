@@ -10,28 +10,6 @@ var (
 	C_TestCommand uint64 = C(C_TEST_DOMAIN, 1, 1)
 )
 
-/*
-type MockCommandBus struct {
-	PublishChan chan Command
-	CommandChan chan Command
-	CancelChan chan struct{}
-}
-
-func NewMockCommandBus() *MockCommandBus {
-	return &MockCommandBus {
-		RegisterChan: make(chan []uint32, 1),
-		PublishChan: make(chan Command, 1),
-		CommandChan: make(chan Command, 1),
-		CancelChan: make(chan struct{}, 1),
-	}
-}
-
-func (mock *MockCommandBus) Create() CommandRouter {
-	return NewChannelCommandBus(
-		mock.PublishChan
-}
-*/
-
 type MockCommandBus struct {
 	Registrations map[uint32]CommandHandler
 	RegisterChan  chan CommandHandler
@@ -60,28 +38,12 @@ func (mock *MockCommandBus) Create() CommandRouter {
 
 type MockHandler struct{}
 
-func (mock *MockHandler) CommandChan() <-chan Command {
+func (mock *MockHandler) CommandChan() chan Command {
 	return nil
-}
-
-func (mock *MockHandler) Publish(command Command) {
-	return
 }
 
 func (mock *MockHandler) Domain() uint32 {
 	return C_TEST_DOMAIN
-}
-
-type TestCommand struct {
-	CommandMemento
-	Value string
-}
-
-func NewTestCommand(id uint64, version uint32, value string) TestCommand {
-	return TestCommand{
-		CommandMemento: NewCommand(id, version, C_TestCommand),
-		Value:          value,
-	}
 }
 
 func Test_Should_return_error_for_empty_domain(t *testing.T) {
@@ -91,7 +53,6 @@ func Test_Should_return_error_for_empty_domain(t *testing.T) {
 	if err != ErrInvalidDomainRegistered {
 		t.Errorf("Should have returned an error for invalid domain but was [ %v ]\n", err)
 	}
-
 	if handle != nil {
 		t.Errorf("Should have returned nil registration handle but returned [ %v ]\n", handle)
 	}
@@ -126,5 +87,27 @@ func Test_Should_not_return_error_from_valid_command_publish(t *testing.T) {
 
 	if err := commandbus.Publish(command); err != nil {
 		t.Errorf("Should not return error from valid publish")
+	}
+}
+
+func Test_Should_receive_matching_command_in_handler(t *testing.T) {
+	commandbus := NewMockCommandBus().Create()
+	handle, _ := commandbus.Register(C_TEST_DOMAIN)
+	commandbus.Step()
+	expected := NewTestCommand(1, 1, "publish test")
+	commandbus.Publish(expected)
+	commandbus.Step()
+
+	select {
+	case actual := <-handle.CommandChan():
+		{
+			if expected != actual {
+				t.Errorf("\nExpect\t[ %v ]\n\tbut was\t[ %v ]\n", expected, actual)
+			}
+		}
+	default:
+		{
+			t.Errorf("Should not have hit default case\n")
+		}
 	}
 }

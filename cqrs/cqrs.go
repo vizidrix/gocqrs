@@ -95,7 +95,8 @@ func (command CommandMemento) GetVersion() uint32 {
 }
 
 func (command CommandMemento) String() string {
-	return fmt.Sprintf(" <C [ <A D[%d] ID[%d] V[%d] \\> -> C[%d] ] C\\> ", command.GetDomain(), command.GetId(), command.GetVersion(), command.CommandType)
+	return fmt.Sprintf(" <C [ <A D[%d] ID[%d] V[%d] \\> -> C[%d] ] C\\> ",
+		command.GetDomain(), command.GetId(), command.GetVersion(), command.CommandType)
 }
 
 type Event interface {
@@ -136,5 +137,6 @@ func (event EventMemento) GetVersion() uint32 {
 }
 
 func (event EventMemento) String() string {
-	return fmt.Sprintf(" <E [ <A D[%d] ID[%d] V[%d] \\> -> E[%d] ] E\\> ", event.GetDomain(), event.GetId(), event.GetVersion(), event.EventType)
+	return fmt.Sprintf(" <E [ <A D[%d] ID[%d] V[%d] \\> -> E[%d] ] E\\> ",
+		event.GetDomain(), event.GetId(), event.GetVersion(), event.EventType)
 }

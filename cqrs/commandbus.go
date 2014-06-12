@@ -24,8 +24,7 @@ func init() {
 type CommandChanFactory func() chan Command
 
 type CommandHandler interface {
-	CommandChan() <-chan Command
-	Publish(command Command)
+	CommandChan() chan Command
 	Domain() uint32
 }
 
@@ -42,16 +41,16 @@ type registration struct {
 	domain      uint32
 }
 
-func (r *registration) CommandChan() <-chan Command {
+func (r *registration) CommandChan() chan Command {
 	return r.commandChan
-}
-
-func (r *registration) Publish(command Command) {
-	r.commandChan <- command
 }
 
 func (r *registration) Domain() uint32 {
 	return r.domain
+}
+
+func SendCommand(c CommandHandler, command Command) {
+	c.CommandChan() <- command
 }
 
 // CommandRouter implementation that uses Go chans to provide routing
@@ -76,6 +75,7 @@ func NewChannelCommandBus(
 	commandChanFactory CommandChanFactory,
 ) *channelCommandBus {
 	bus := &channelCommandBus{
+		registrations:      make(map[uint32]CommandHandler),
 		registerChan:       registerChan,
 		publishChan:        publishChan,
 		commandChanFactory: commandChanFactory,
@@ -90,12 +90,13 @@ func (c *channelCommandBus) Step() {
 			if _, handled := c.registrations[newRegistration.Domain()]; handled {
 				panic(ErrDuplicateRegistration)
 			}
+
 			c.registrations[newRegistration.Domain()] = newRegistration
 		}
 	case command := <-c.publishChan:
 		{
 			handler := c.registrations[command.GetDomain()]
-			handler.Publish(command)
+			SendCommand(handler, command)
 		}
 	}
 }
