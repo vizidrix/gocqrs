@@ -1,6 +1,7 @@
 package correlations
 
 import (
+	"fmt"
 	"github.com/vizidrix/gocqrs/cqrs"
 )
 
@@ -8,13 +9,13 @@ var DOMAIN_NAME = "correlations"
 var DOMAIN uint32 = 0xE7ECE41A
 
 var (
-	C_AddClient    uint32 = cqrs.C(DOMAIN, 1, 1)
-	C_ExpireClient uint32 = cqrs.C(DOMAIN, 1, 2)
+	C_AddClient    uint64 = cqrs.C(DOMAIN, 1, 1)
+	C_ExpireClient uint64 = cqrs.C(DOMAIN, 1, 2)
 )
 
 var (
-	E_ClientAdded   uint32 = cqrs.E(DOMAIN, 1, 1)
-	E_ClientExpired uint32 = cqrs.E(DOMAIN, 1, 2)
+	E_ClientAdded   uint64 = cqrs.E(DOMAIN, 1, 1)
+	E_ClientExpired uint64 = cqrs.E(DOMAIN, 1, 2)
 )
 
 /* Domain */
@@ -50,7 +51,7 @@ type CorrelationMemento struct {
 
 func NewCorrelation(clientid uint64, correlation uint64) CorrelationMemento {
 	return CorrelationMemento{
-		Client:      clientid,
+		ClientId:    clientid,
 		Correlation: correlation,
 	}
 }
@@ -78,7 +79,7 @@ func NewAddClient(id uint64, session int) AddClient {
 }
 
 type ExpireClient struct {
-	cqrs.Command
+	cqrs.CommandMemento
 }
 
 func NewExpireClient(id uint64, version uint32) ExpireClient {
@@ -90,7 +91,7 @@ func NewExpireClient(id uint64, version uint32) ExpireClient {
 /* Events */
 
 type ClientAdded struct {
-	cqrs.Event
+	cqrs.EventMemento
 	SessionId int `json:"session"`
 }
 
@@ -107,7 +108,7 @@ func NewClientAdded(id uint64, session int) ClientAdded {
 }
 
 type ClientExpired struct {
-	cqrs.Event
+	cqrs.EventMemento
 }
 
 func (event ClientExpired) String() string {

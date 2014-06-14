@@ -10,7 +10,6 @@ const MESSAGE_TYPE_MASK = 0x80000000
 
 func C(domain uint32, version uint64, typeId uint64) uint64 {
 	return (uint64(domain) << 32) | uint64(MESSAGE_TYPE_MASK) | (version & 0x7FFF << 16) | (typeId & 0xFFFF)
-
 }
 
 func E(domain uint32, version uint64, typeId uint64) uint64 {
