@@ -1,27 +1,34 @@
 package clientsockets
 
 import (
-	"github.com/vizidrix/gocqrs/cqrs"
+	"code.google.com/p/go.net/websocket"
+	"fmt"
+	"github.com/vizidrix/gocqrs/net/clients"
 )
 
-func HandleClientSockets(clients *ClientView, subscriptionchan chan *ClientConn) func(*websocket.Conn) {
-	connections := make(map[uint64]*ClientConn)
-	addchan := make(chan *ClientConn)
-	removechan := make(chan *ClientConn)
+func HandleClientSockets(clientsessions *clients.ClientSessionView, subscriptionchan chan *Connection) func(*websocket.Conn) {
+	connections := make(map[uint64]*Connection)
+	addchan := make(chan *Connection)
+	removechan := make(chan *Connection)
 
 	go func() {
 		for {
 			select {
-			case clientconn := <-addchan:
-				connections[clientconn.Client] = clientconn
-				subscriptionchan <- clientconn
-			case clientconn := <-removechan:
+			case connection := <-addchan:
+				if _, active := connections[connection.client]; active {
+					removechan <- connection
+				} else {
+					connections[connection.client] = connection
+					subscriptionchan <- connection
+				}
+
+			case connection := <-removechan:
 				select {
-				case <-clientconn.ExitChan:
+				case <-connection.exitChan:
 				default:
-					fmt.Printf("\nClosing out client for session: %s", clientconn.Client)
-					close(clientconn.ExitChan)
-					delete(connections, clientconn.Client)
+					fmt.Printf("\nClosing out client for session: %s", connection.client)
+					close(connection.exitChan)
+					delete(connections, connection.client)
 				}
 			}
 		}
@@ -31,16 +38,16 @@ func HandleClientSockets(clients *ClientView, subscriptionchan chan *ClientConn)
 		defer func() { conn.Close() }()
 		session := conn.Request().FormValue("session")
 
-		client, err := clients.GetBySession(session)
+		client, err := clientsessions.GetBySession(session)
 		//		fmt.Println("Starting new client...")
 		if err != nil {
-			clienterr := NewClientError("invalid_session")
-			//			fmt.Printf("\nError validating session: %v", err)
-			websocket.JSON.Send(conn, clienterr)
+			fmt.Printf("\nError validating session: %v", err)
+			//	clienterr := err.NewError("invalid_session")
+			//	websocket.JSON.Send(conn, clienterr)
 			return
 		} else {
-			cliententry := NewClientConn(session, client)
-			addchan <- cliententry
+			connection := NewConnection(session, client)
+			addchan <- &connection
 
 			//			fmt.Printf("\nNew connection %s", session)
 			//			fmt.Printf("\nConnection %s connecting client infrastructure...", sessionid)
@@ -49,13 +56,13 @@ func HandleClientSockets(clients *ClientView, subscriptionchan chan *ClientConn)
 				//				defer func() { fmt.Println("Ending client event stream") }()
 				for {
 					select {
-					case event := <-cliententry.EventChan:
+					case event := <-connection.eventChan:
 						if err := websocket.JSON.Send(conn, event); err != nil {
 							fmt.Printf("\nError sending to Client:\n\t%v", err)
-							removechan <- cliententry
+							removechan <- &connection
 							return
 						}
-					case <-cliententry.ExitChan:
+					case <-connection.exitChan:
 						return
 					}
 				}
@@ -67,19 +74,19 @@ func HandleClientSockets(clients *ClientView, subscriptionchan chan *ClientConn)
 					if err := websocket.JSON.Receive(conn, &message); err != nil {
 						fmt.Printf("\nReceived %+v from Client", message)
 						fmt.Printf("\nError receiving from Client:\n\t%v", err)
-						removechan <- cliententry
+						removechan <- &connection
 						return
 					}
 					select {
-					case cliententry.MessageChan <- message:
+					case connection.messageChan <- message:
 
-					case <-cliententry.ExitChan:
+					case <-connection.exitChan:
 						return
 					}
 				}
 			}()
 
-			<-cliententry.ExitChan
+			<-connection.exitChan
 		}
 	}
 }

@@ -1,6 +1,7 @@
 package clients
 
 import (
+	"fmt"
 	"github.com/vizidrix/gocqrs/cqrs"
 )
 
@@ -79,7 +80,7 @@ func (event ClientAdded) String() string {
 		event.GetDomain(), event.GetId(), event.GetVersion(), "Client Added")
 }
 
-func NewClientAdded(clientId uint64, clientId uint64, session string) ClientAdded {
+func NewClientAdded(clientId uint64, session string) ClientAdded {
 	return ClientAdded{
 		EventMemento: cqrs.NewEvent(clientId, 0, E_ClientAdded),
 		Session:      session,
@@ -96,7 +97,7 @@ func (event ClientSessionUpdated) String() string {
 		event.GetDomain(), event.GetId(), event.GetVersion(), "Client Session Updated")
 }
 
-func NewClientSessionUpdated(clientId uint64, clientId uint64, session string) ClientSessionUpdated {
+func NewClientSessionUpdated(clientId uint64, session string) ClientSessionUpdated {
 	return ClientSessionUpdated{
 		EventMemento: cqrs.NewEvent(clientId, 0, E_ClientSessionUpdated),
 		Session:      session,
@@ -112,7 +113,7 @@ func (event ClientRemoved) String() string {
 		event.GetDomain(), event.GetId(), event.GetVersion(), "Client Removed")
 }
 
-func NewClientRemoved(clientId uint64, clientId uint64) ClientRemoved {
+func NewClientRemoved(clientId uint64) ClientRemoved {
 	return ClientRemoved{
 		EventMemento: cqrs.NewEvent(clientId, 0, E_ClientRemoved),
 	}
