@@ -39,7 +39,7 @@ func HandleClientSockets(clientsessions *clients.ClientSessionView, subscription
 		session := conn.Request().FormValue("session")
 
 		client, err := clientsessions.GetBySession(session)
-		//		fmt.Println("Starting new client...")
+
 		if err != nil {
 			fmt.Printf("\nError validating session: %v", err)
 			//	clienterr := err.NewError("invalid_session")
