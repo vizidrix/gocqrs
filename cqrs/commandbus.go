@@ -115,8 +115,9 @@ func (c *channelCommandBus) Publish(command Command) error {
 	}
 	select {
 	case c.publishChan <- command:
-	default:
-		return ErrInvalidCommandBusState
+		/*	default:
+			return ErrInvalidCommandBusState
+		*/
 	}
 	return nil
 }

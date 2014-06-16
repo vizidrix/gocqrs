@@ -6,7 +6,7 @@ import (
 	"github.com/vizidrix/gocqrs/net/clients"
 )
 
-func HandleClientSockets(clientsessions *clients.ClientSessionView, subscriptionchan chan *Connection) func(*websocket.Conn) {
+func HandleClientSockets(clientsessions *clients.ClientSessionsView, subscriptionchan chan *Connection) func(*websocket.Conn) {
 	connections := make(map[uint64]*Connection)
 	addchan := make(chan *Connection)
 	removechan := make(chan *Connection)

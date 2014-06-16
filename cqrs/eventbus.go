@@ -190,8 +190,9 @@ func (c *channelEventBus) Publish(event Event) error {
 
 	select {
 	case c.publishChan <- event:
-	default:
-		return ErrInvalidEventBusState
+		/*	default:
+			return ErrInvalidEventBusState
+		*/
 	}
 	return nil
 }
