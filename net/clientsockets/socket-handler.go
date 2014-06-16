@@ -79,7 +79,7 @@ func HandleClientSockets(clientsessions *clients.ClientSessionsView, subscriptio
 					}
 					select {
 					case connection.messageChan <- message:
-
+						fmt.Printf("\n%v", message)
 					case <-connection.exitChan:
 						return
 					}
