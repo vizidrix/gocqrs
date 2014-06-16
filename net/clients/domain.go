@@ -51,7 +51,7 @@ type UpdateClientSession struct {
 	Session string
 }
 
-func NewUpdateClientSession(clientId uint64, clientVersion uint32, clientid uint64, session string) UpdateClientSession {
+func NewUpdateClientSession(clientId uint64, clientVersion uint32, session string) UpdateClientSession {
 	return UpdateClientSession{
 		CommandMemento: cqrs.NewCommand(clientId, clientVersion, C_UpdateClientSession),
 		Session:        session,
@@ -62,9 +62,9 @@ type RemoveClient struct {
 	cqrs.CommandMemento
 }
 
-func NewRemoveClient(clientId uint64, clientid uint64) RemoveClient {
+func NewRemoveClient(clientId uint64, clientVersion uint32) RemoveClient {
 	return RemoveClient{
-		CommandMemento: cqrs.NewCommand(clientId, 0, C_RemoveClient),
+		CommandMemento: cqrs.NewCommand(clientId, clientVersion, C_RemoveClient),
 	}
 }
 
@@ -97,9 +97,9 @@ func (event ClientSessionUpdated) String() string {
 		event.GetDomain(), event.GetId(), event.GetVersion(), "Client Session Updated")
 }
 
-func NewClientSessionUpdated(clientId uint64, session string) ClientSessionUpdated {
+func NewClientSessionUpdated(clientId uint64, clientVersion uint32, session string) ClientSessionUpdated {
 	return ClientSessionUpdated{
-		EventMemento: cqrs.NewEvent(clientId, 0, E_ClientSessionUpdated),
+		EventMemento: cqrs.NewEvent(clientId, clientVersion, E_ClientSessionUpdated),
 		Session:      session,
 	}
 }
@@ -113,8 +113,8 @@ func (event ClientRemoved) String() string {
 		event.GetDomain(), event.GetId(), event.GetVersion(), "Client Removed")
 }
 
-func NewClientRemoved(clientId uint64) ClientRemoved {
+func NewClientRemoved(clientId uint64, clientVersion uint32) ClientRemoved {
 	return ClientRemoved{
-		EventMemento: cqrs.NewEvent(clientId, 0, E_ClientRemoved),
+		EventMemento: cqrs.NewEvent(clientId, clientVersion, E_ClientRemoved),
 	}
 }
