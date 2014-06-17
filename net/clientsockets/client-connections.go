@@ -17,7 +17,7 @@ func NewConnection(session string, client uint64) Connection {
 		session:     session,
 		client:      client,
 		eventChan:   make(chan cqrs.Event),
-		messageChan: make(chan []byte),
+		messageChan: make(chan []byte, 1),
 		exitChan:    make(chan struct{}),
 	}
 }
@@ -36,4 +36,20 @@ func (connection *Connection) MessageChan() chan []byte {
 
 func (connection *Connection) ExitChan() chan struct{} {
 	return connection.exitChan
+}
+
+type ConnectionService struct {
+	connections      map[uint64]*Connection
+	addChan          chan *Connection
+	removeChan       chan *Connection
+	subscriptionChan chan *Connection
+}
+
+func NewConnectionService(subscriptionchan chan *Connection) ConnectionService {
+	return ConnectionService{
+		connections:      make(map[uint64]*Connection),
+		addChan:          make(chan *Connection),
+		removeChan:       make(chan *Connection),
+		subscriptionChan: subscriptionchan,
+	}
 }
