@@ -31,13 +31,17 @@ func HandleClientSockets(clientsessions *clients.ClientSessionsView, subscriptio
 
 			go func() {
 				for {
-					HandleClientEvent(conn, &connection, removechan)
+					if active := HandleClientEvent(conn, &connection, removechan); !active {
+						return
+					}
 				}
 			}()
 
 			go func() {
 				for {
-					HandleClientMessage(conn, &connection, removechan)
+					if active := HandleClientMessage(conn, &connection, removechan); !active {
+						return
+					}
 				}
 			}()
 
@@ -71,31 +75,32 @@ func ManageConnections(addchan chan *Connection, removechan chan *Connection, su
 	}
 }
 
-func HandleClientEvent(conn *websocket.Conn, connection *Connection, removechan chan *Connection) {
+func HandleClientEvent(conn *websocket.Conn, connection *Connection, removechan chan *Connection) bool {
 	select {
 	case event := <-connection.eventChan:
 		if err := websocket.JSON.Send(conn, event); err != nil {
 			fmt.Printf("\nError sending to Client:\n\t%v", err)
 			removechan <- connection
-			return
+			return false
 		}
+		return true
 	case <-connection.exitChan:
-		return
+		return false
 	}
 }
 
-func HandleClientMessage(conn *websocket.Conn, connection *Connection, removechan chan *Connection) {
+func HandleClientMessage(conn *websocket.Conn, connection *Connection, removechan chan *Connection) bool {
 	var message []byte
 	if err := websocket.JSON.Receive(conn, &message); err != nil {
 		fmt.Printf("\nError receiving from Client:\n\t%v", err)
 		removechan <- connection
-		return
+		return false
 	}
 	select {
 	case connection.messageChan <- message:
-
+		return true
 	case <-connection.exitChan:
-		return
+		return false
 	}
 }
 
