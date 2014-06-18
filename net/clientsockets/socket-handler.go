@@ -6,12 +6,12 @@ import (
 	"github.com/vizidrix/gocqrs/net/clients"
 )
 
-func HandleClientSockets(clientsessions *clients.ClientSessionsView, subscriptionchan chan *Connection) func(*websocket.Conn) {
-	addchan := make(chan *Connection, 1)
-	removechan := make(chan *Connection, 1)
+func HandleClientSockets(clientsessions *clients.ClientSessionsView, subscriptionchan chan ClientConnection) func(*websocket.Conn) {
+	addchan := make(chan *ConnectionMemento, 1)
+	removechan := make(chan *ConnectionMemento, 1)
 
 	go func() {
-		ManageConnections(addchan, removechan, subscriptionchan)
+		ManageConnectionMementos(addchan, removechan, subscriptionchan)
 	}()
 
 	return func(conn *websocket.Conn) {
@@ -50,19 +50,19 @@ func HandleClientSockets(clientsessions *clients.ClientSessionsView, subscriptio
 	}
 }
 
-func ManageConnections(addchan chan *Connection, removechan chan *Connection, subscriptionchan chan *Connection) {
-	connections := make(map[uint64]*Connection)
+func ManageConnectionMementos(addchan chan *ConnectionMemento, removechan chan *ConnectionMemento, subscriptionchan chan ClientConnection) {
+	connections := make(map[uint64]*ConnectionMemento)
 	for {
 		select {
 		case connection := <-addchan:
-			fmt.Printf("\nRegistering Connection: %d", connection.client)
+			fmt.Printf("\nRegistering ConnectionMemento: %d", connection.client)
 			if _, active := connections[connection.client]; active {
 				removechan <- connection
 			} else {
 				connections[connection.client] = connection
 				subscriptionchan <- connection
 			}
-			fmt.Printf(("\nNew Connection: %d"), connection.client)
+			fmt.Printf(("\nNew ConnectionMemento: %d"), connection.client)
 		case connection := <-removechan:
 			select {
 			case <-connection.exitChan:
@@ -75,7 +75,7 @@ func ManageConnections(addchan chan *Connection, removechan chan *Connection, su
 	}
 }
 
-func HandleClientEvent(conn *websocket.Conn, connection *Connection, removechan chan *Connection) bool {
+func HandleClientEvent(conn *websocket.Conn, connection *ConnectionMemento, removechan chan *ConnectionMemento) bool {
 	select {
 	case event := <-connection.eventChan:
 		if err := websocket.JSON.Send(conn, event); err != nil {
@@ -89,7 +89,7 @@ func HandleClientEvent(conn *websocket.Conn, connection *Connection, removechan 
 	}
 }
 
-func HandleClientMessage(conn *websocket.Conn, connection *Connection, removechan chan *Connection) bool {
+func HandleClientMessage(conn *websocket.Conn, connection *ConnectionMemento, removechan chan *ConnectionMemento) bool {
 	var message []byte
 	if err := websocket.JSON.Receive(conn, &message); err != nil {
 		fmt.Printf("\nError receiving from Client:\n\t%v", err)
@@ -105,23 +105,23 @@ func HandleClientMessage(conn *websocket.Conn, connection *Connection, removecha
 }
 
 /*
-func HandleClientSockets(clientsessions *clients.ClientSessionsView, subscriptionchan chan *Connection) func(*websocket.Conn) {
-	connections := make(map[uint64]*Connection)
-	addchan := make(chan *Connection, 1)
-	removechan := make(chan *Connection, 1)
+func HandleClientSockets(clientsessions *clients.ClientSessionsView, subscriptionchan chan *ConnectionMemento) func(*websocket.Conn) {
+	connections := make(map[uint64]*ConnectionMemento)
+	addchan := make(chan *ConnectionMemento, 1)
+	removechan := make(chan *ConnectionMemento, 1)
 
 	go func() {
 		for {
 			select {
 			case connection := <-addchan:
-				fmt.Printf("\nRegistering Connection: %d", connection.client)
+				fmt.Printf("\nRegistering ConnectionMemento: %d", connection.client)
 				if _, active := connections[connection.client]; active {
 					removechan <- connection
 				} else {
 					connections[connection.client] = connection
 					subscriptionchan <- connection
 				}
-				fmt.Printf(("\nNew Connection: %d"), connection.client)
+				fmt.Printf(("\nNew ConnectionMemento: %d"), connection.client)
 			case connection := <-removechan:
 				select {
 				case <-connection.exitChan:
@@ -146,11 +146,11 @@ func HandleClientSockets(clientsessions *clients.ClientSessionsView, subscriptio
 			//	websocket.JSON.Send(conn, clienterr)
 			return
 		} else {
-			connection := NewConnection(session, client)
+			connection := NewConnectionMemento(session, client)
 			addchan <- &connection
 
 			//			fmt.Printf("\nNew connection %s", session)
-			//			fmt.Printf("\nConnection %s connecting client infrastructure...", sessionid)
+			//			fmt.Printf("\nConnectionMemento %s connecting client infrastructure...", sessionid)
 
 			go func() {
 				//				defer func() { fmt.Println("Ending client event stream") }()

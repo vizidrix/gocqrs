@@ -4,7 +4,14 @@ import (
 	"github.com/vizidrix/gocqrs/cqrs"
 )
 
-type Connection struct {
+type ClientConnection interface {
+	Client() uint64
+	EventChan() chan cqrs.Event
+	MessageChan() chan []byte
+	ExitChan() chan struct{}
+}
+
+type ConnectionMemento struct {
 	session     string
 	client      uint64
 	eventChan   chan cqrs.Event
@@ -12,44 +19,44 @@ type Connection struct {
 	exitChan    chan struct{}
 }
 
-func NewConnection(session string, client uint64) Connection {
-	return Connection{
+func NewConnection(session string, client uint64) ConnectionMemento {
+	return ConnectionMemento{
 		session:     session,
 		client:      client,
 		eventChan:   make(chan cqrs.Event),
-		messageChan: make(chan []byte, 1),
+		messageChan: make(chan []byte),
 		exitChan:    make(chan struct{}),
 	}
 }
 
-func (connection *Connection) Client() uint64 {
+func (connection *ConnectionMemento) Client() uint64 {
 	return connection.client
 }
 
-func (connection *Connection) EventChan() chan cqrs.Event {
+func (connection *ConnectionMemento) EventChan() chan cqrs.Event {
 	return connection.eventChan
 }
 
-func (connection *Connection) MessageChan() chan []byte {
+func (connection *ConnectionMemento) MessageChan() chan []byte {
 	return connection.messageChan
 }
 
-func (connection *Connection) ExitChan() chan struct{} {
+func (connection *ConnectionMemento) ExitChan() chan struct{} {
 	return connection.exitChan
 }
 
 type ConnectionService struct {
-	connections      map[uint64]*Connection
-	addChan          chan *Connection
-	removeChan       chan *Connection
-	subscriptionChan chan *Connection
+	connections      map[uint64]*ConnectionMemento
+	addChan          chan *ConnectionMemento
+	removeChan       chan *ConnectionMemento
+	subscriptionChan chan ClientConnection
 }
 
-func NewConnectionService(subscriptionchan chan *Connection) ConnectionService {
+func NewConnectionService(subscriptionchan chan ClientConnection) ConnectionService {
 	return ConnectionService{
-		connections:      make(map[uint64]*Connection),
-		addChan:          make(chan *Connection),
-		removeChan:       make(chan *Connection),
+		connections:      make(map[uint64]*ConnectionMemento),
+		addChan:          make(chan *ConnectionMemento),
+		removeChan:       make(chan *ConnectionMemento),
 		subscriptionChan: subscriptionchan,
 	}
 }
