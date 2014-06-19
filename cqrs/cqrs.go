@@ -64,21 +64,17 @@ type Command interface {
 }
 
 type CommandMemento struct {
-	CommandType uint64 `json:"__ctype"`   // Command Type
 	Id          uint64 `json:"__id"`      // Aggregate Id
 	Version     uint32 `json:"__version"` // Aggregate Version
+	CommandType uint64 `json:"__ctype"`   // Command Type
 }
 
 func NewCommand(id uint64, version uint32, commandType uint64) CommandMemento {
 	return CommandMemento{
-		CommandType: commandType,
 		Id:          id,
 		Version:     version,
+		CommandType: commandType,
 	}
-}
-
-func (command CommandMemento) GetCommandType() uint64 {
-	return command.CommandType
 }
 
 func (command CommandMemento) GetDomain() uint32 {
@@ -91,6 +87,10 @@ func (command CommandMemento) GetId() uint64 {
 
 func (command CommandMemento) GetVersion() uint32 {
 	return command.Version
+}
+
+func (command CommandMemento) GetCommandType() uint64 {
+	return command.CommandType
 }
 
 func (command CommandMemento) String() string {
@@ -106,21 +106,17 @@ type Event interface {
 }
 
 type EventMemento struct {
-	EventType uint64 `json:"__etype"`   // Event Type
 	Id        uint64 `json:"__id"`      // Aggregate Id
 	Version   uint32 `json:"__version"` // Aggregate Version
+	EventType uint64 `json:"__etype"`   // Event Type
 }
 
 func NewEvent(id uint64, version uint32, eventType uint64) EventMemento {
-	return EventMemento{
-		EventType: eventType,
+	return EventMemento{		
 		Id:        id,
 		Version:   version,
+		EventType: eventType,
 	}
-}
-
-func (event EventMemento) GetEventType() uint64 {
-	return event.EventType
 }
 
 func (event EventMemento) GetDomain() uint32 {
@@ -133,6 +129,10 @@ func (event EventMemento) GetId() uint64 {
 
 func (event EventMemento) GetVersion() uint32 {
 	return event.Version
+}
+
+func (event EventMemento) GetEventType() uint64 {
+	return event.EventType
 }
 
 func (event EventMemento) String() string {
