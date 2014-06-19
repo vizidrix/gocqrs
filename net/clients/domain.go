@@ -41,7 +41,7 @@ type AddClient struct {
 
 func NewAddClient(clientId uint64, session string) AddClient {
 	return AddClient{
-		CommandMemento: cqrs.NewCommand(clientId, 0, C_AddClient),
+		CommandMemento: cqrs.NewCommand(DOMAIN, clientId, 0, C_AddClient),
 		Session:        session,
 	}
 }
@@ -53,7 +53,7 @@ type UpdateClientSession struct {
 
 func NewUpdateClientSession(clientId uint64, clientVersion uint32, session string) UpdateClientSession {
 	return UpdateClientSession{
-		CommandMemento: cqrs.NewCommand(clientId, clientVersion, C_UpdateClientSession),
+		CommandMemento: cqrs.NewCommand(DOMAIN, clientId, clientVersion, C_UpdateClientSession),
 		Session:        session,
 	}
 }
@@ -64,7 +64,7 @@ type RemoveClient struct {
 
 func NewRemoveClient(clientId uint64, clientVersion uint32) RemoveClient {
 	return RemoveClient{
-		CommandMemento: cqrs.NewCommand(clientId, clientVersion, C_RemoveClient),
+		CommandMemento: cqrs.NewCommand(DOMAIN, clientId, clientVersion, C_RemoveClient),
 	}
 }
 
@@ -82,7 +82,7 @@ func (event ClientAdded) String() string {
 
 func NewClientAdded(clientId uint64, session string) ClientAdded {
 	return ClientAdded{
-		EventMemento: cqrs.NewEvent(clientId, 0, E_ClientAdded),
+		EventMemento: cqrs.NewEvent(DOMAIN, clientId, 0, E_ClientAdded),
 		Session:      session,
 	}
 }
@@ -99,7 +99,7 @@ func (event ClientSessionUpdated) String() string {
 
 func NewClientSessionUpdated(clientId uint64, clientVersion uint32, session string) ClientSessionUpdated {
 	return ClientSessionUpdated{
-		EventMemento: cqrs.NewEvent(clientId, clientVersion, E_ClientSessionUpdated),
+		EventMemento: cqrs.NewEvent(DOMAIN, clientId, clientVersion, E_ClientSessionUpdated),
 		Session:      session,
 	}
 }
@@ -115,6 +115,6 @@ func (event ClientRemoved) String() string {
 
 func NewClientRemoved(clientId uint64, clientVersion uint32) ClientRemoved {
 	return ClientRemoved{
-		EventMemento: cqrs.NewEvent(clientId, clientVersion, E_ClientRemoved),
+		EventMemento: cqrs.NewEvent(DOMAIN, clientId, clientVersion, E_ClientRemoved),
 	}
 }

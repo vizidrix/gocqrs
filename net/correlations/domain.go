@@ -73,7 +73,7 @@ type AddClient struct {
 
 func NewAddClient(id uint64, session int) AddClient {
 	return AddClient{
-		CommandMemento: cqrs.NewCommand(id, 0, C_AddClient),
+		CommandMemento: cqrs.NewCommand(DOMAIN, id, 0, C_AddClient),
 		SessionId:      session,
 	}
 }
@@ -84,7 +84,7 @@ type ExpireClient struct {
 
 func NewExpireClient(id uint64, version uint32) ExpireClient {
 	return ExpireClient{
-		CommandMemento: cqrs.NewCommand(id, version, C_ExpireClient),
+		CommandMemento: cqrs.NewCommand(DOMAIN, id, version, C_ExpireClient),
 	}
 }
 
@@ -102,7 +102,7 @@ func (event ClientAdded) String() string {
 
 func NewClientAdded(id uint64, session int) ClientAdded {
 	return ClientAdded{
-		EventMemento: cqrs.NewEvent(id, 0, E_ClientAdded),
+		EventMemento: cqrs.NewEvent(DOMAIN, id, 0, E_ClientAdded),
 		SessionId:    session,
 	}
 }
@@ -118,6 +118,6 @@ func (event ClientExpired) String() string {
 
 func NewClientExpired(id uint64, version uint32) ClientExpired {
 	return ClientExpired{
-		EventMemento: cqrs.NewEvent(id, version, E_ClientExpired),
+		EventMemento: cqrs.NewEvent(DOMAIN, id, version, E_ClientExpired),
 	}
 }

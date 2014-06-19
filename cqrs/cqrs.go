@@ -111,7 +111,7 @@ type EventMemento struct {
 	Domain    uint32 `json:__domain`    // Aggregate Domain
 	Id        uint64 `json:"__id"`      // Aggregate Id
 	Version   uint32 `json:"__version"` // Aggregate Version
-	EventType uint64 `json:"__etype"`   // Event Type
+	EventType uint32 `json:"__etype"`   // Event Type
 }
 
 func NewEvent(domain uint32, id uint64, version uint32, eventType uint64) EventMemento {
