@@ -64,21 +64,23 @@ type Command interface {
 }
 
 type CommandMemento struct {
+	Domain      uint32 `json:__domain`    // Aggregate Domain
 	Id          uint64 `json:"__id"`      // Aggregate Id
 	Version     uint32 `json:"__version"` // Aggregate Version
-	CommandType uint64 `json:"__ctype"`   // Command Type
+	CommandType uint32 `json:"__ctype"`   // Command Type
 }
 
-func NewCommand(id uint64, version uint32, commandType uint64) CommandMemento {
+func NewCommand(domain uint32, id uint64, version uint32, commandType uint64) CommandMemento {
 	return CommandMemento{
+		Domain:      domain,
 		Id:          id,
 		Version:     version,
-		CommandType: commandType,
+		CommandType: uint32((commandType >> 32) << 32),
 	}
 }
 
 func (command CommandMemento) GetDomain() uint32 {
-	return uint32(command.CommandType >> 32)
+	return command.Domain
 }
 
 func (command CommandMemento) GetId() uint64 {
@@ -90,7 +92,7 @@ func (command CommandMemento) GetVersion() uint32 {
 }
 
 func (command CommandMemento) GetCommandType() uint64 {
-	return command.CommandType
+	return (uint64(command.Domain) << 32) | uint64(command.CommandType)
 }
 
 func (command CommandMemento) String() string {
@@ -106,21 +108,23 @@ type Event interface {
 }
 
 type EventMemento struct {
+	Domain    uint32 `json:__domain`    // Aggregate Domain
 	Id        uint64 `json:"__id"`      // Aggregate Id
 	Version   uint32 `json:"__version"` // Aggregate Version
 	EventType uint64 `json:"__etype"`   // Event Type
 }
 
-func NewEvent(id uint64, version uint32, eventType uint64) EventMemento {
-	return EventMemento{		
+func NewEvent(domain uint32, id uint64, version uint32, eventType uint64) EventMemento {
+	return EventMemento{
+		Domain:    domain,
 		Id:        id,
 		Version:   version,
-		EventType: eventType,
+		EventType: uint32((eventType >> 32) << 32),
 	}
 }
 
 func (event EventMemento) GetDomain() uint32 {
-	return uint32(event.EventType >> 32)
+	return event.Domain
 }
 
 func (event EventMemento) GetId() uint64 {
@@ -132,7 +136,7 @@ func (event EventMemento) GetVersion() uint32 {
 }
 
 func (event EventMemento) GetEventType() uint64 {
-	return event.EventType
+	return (uint64(event.Domain) << 32) | uint64(event.EventType)
 }
 
 func (event EventMemento) String() string {
