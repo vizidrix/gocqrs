@@ -19,7 +19,7 @@ type TestCommand struct {
 
 func NewTestCommand(id uint64, version uint32, value string) TestCommand {
 	return TestCommand{
-		CommandMemento: NewCommand(id, version, C_TestCommand),
+		CommandMemento: NewCommand(TEST_DOMAIN, id, version, C_TestCommand),
 		Value:          value,
 	}
 }
@@ -31,7 +31,7 @@ type TestEvent struct {
 
 func NewTestEvent(id uint64, version uint32, value string) TestEvent {
 	return TestEvent{
-		EventMemento: NewEvent(id, version, E_TestEvent),
+		EventMemento: NewEvent(TEST_DOMAIN, id, version, E_TestEvent),
 		Value:        value,
 	}
 }
@@ -56,7 +56,7 @@ func Test_Should_calculate_correct_event_key(t *testing.T) {
 
 func Test_Should_return_correct_command_domain(t *testing.T) {
 	var expected = "0x11111111"
-	var command = NewCommand(0, 0, B_TestCommand)
+	var command = NewCommand(TEST_DOMAIN, 0, 0, B_TestCommand)
 	var result = command.GetDomain()
 
 	if fmt.Sprintf("%#x", result) != expected {
@@ -66,7 +66,7 @@ func Test_Should_return_correct_command_domain(t *testing.T) {
 
 func Test_Should_return_correct_event_domain(t *testing.T) {
 	var expected = "0x11111111"
-	var event = NewEvent(0, 0, B_TestEvent)
+	var event = NewEvent(TEST_DOMAIN, 0, 0, B_TestEvent)
 	var result = event.GetDomain()
 
 	if fmt.Sprintf("%#x", result) != expected {
