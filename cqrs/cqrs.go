@@ -75,7 +75,7 @@ func NewCommand(domain uint32, id uint64, version uint32, commandType uint64) Co
 		Domain:      domain,
 		Id:          id,
 		Version:     version,
-		CommandType: uint32((commandType >> 32) << 32),
+		CommandType: uint32((commandType << 32) >> 32),
 	}
 }
 
@@ -119,7 +119,7 @@ func NewEvent(domain uint32, id uint64, version uint32, eventType uint64) EventM
 		Domain:    domain,
 		Id:        id,
 		Version:   version,
-		EventType: uint32((eventType >> 32) << 32),
+		EventType: uint32((eventType << 32) >> 32),
 	}
 }
 
