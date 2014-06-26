@@ -4,6 +4,28 @@ import (
 	//"errors"
 	//"log"
 )
+
+/*
+
+REFER TO cqrs/cqrs.go  for the main library
+
+Working on refactoring it from the sub folder back into root
+
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /*
 type Command struct {
 	CommandDomain int32 `json:"__domain"`
