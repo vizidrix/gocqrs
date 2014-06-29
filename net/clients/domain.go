@@ -60,11 +60,13 @@ func NewUpdateClientSession(clientId uint64, clientVersion uint32, session strin
 
 type RemoveClient struct {
 	cqrs.CommandMemento
+	Session string
 }
 
-func NewRemoveClient(clientId uint64, clientVersion uint32) RemoveClient {
+func NewRemoveClient(clientId uint64, clientVersion uint32, session string) RemoveClient {
 	return RemoveClient{
 		CommandMemento: cqrs.NewCommand(DOMAIN, clientId, clientVersion, C_RemoveClient),
+		Session:        session,
 	}
 }
 
@@ -106,6 +108,7 @@ func NewClientSessionUpdated(clientId uint64, clientVersion uint32, session stri
 
 type ClientRemoved struct {
 	cqrs.EventMemento
+	Session string
 }
 
 func (event ClientRemoved) String() string {
@@ -113,8 +116,9 @@ func (event ClientRemoved) String() string {
 		event.GetDomain(), event.GetId(), event.GetVersion(), "Client Removed")
 }
 
-func NewClientRemoved(clientId uint64, clientVersion uint32) ClientRemoved {
+func NewClientRemoved(clientId uint64, clientVersion uint32, session string) ClientRemoved {
 	return ClientRemoved{
 		EventMemento: cqrs.NewEvent(DOMAIN, clientId, clientVersion, E_ClientRemoved),
+		Session:      session,
 	}
 }

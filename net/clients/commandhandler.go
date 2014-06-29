@@ -58,7 +58,7 @@ func NewClientCommandHandler(eventbus cqrs.EventRouter, state *ClientState) (fun
 				}
 
 				fmt.Printf("\nCommand Handler: Trying to delete client->\n\t%v", command)
-				eventbus.Publish(NewClientRemoved(cmd.GetId(), cmd.GetVersion()))
+				eventbus.Publish(NewClientRemoved(cmd.GetId(), cmd.GetVersion(), cmd.Session))
 			}
 		default:
 			{
