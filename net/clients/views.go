@@ -27,6 +27,7 @@ func (view *ClientSessionsView) RegisterClientBySession(session string, client u
 		view.Clients[session] = client
 		return nil
 	} else {
+		view.Clients[session] = client
 		return ErrActiveSession
 	}
 }
@@ -55,30 +56,34 @@ func (view *ClientSessionsView) DeleteByClient(clientid uint64) error {
 	}
 }
 
-func ClientSessionsViewHandler(eventChan chan cqrs.Event, clientview *ClientSessionsView) {
-	for {
-		select {
-		case newevent := <-eventChan:
-			switch event := newevent.(type) {
-			case ClientAdded:
-				fmt.Printf("\nClient View Handler: Adding client %d to View", event.GetId())
-				clientview.RegisterClientBySession(event.Session, event.GetId())
-			case ClientSessionUpdated:
-				fmt.Printf("\nClient View Handler: Updating session for client %d in View", event.GetId())
-				clientview.DeleteByClient(event.GetId())
-				clientview.RegisterClientBySession(event.Session, event.GetId())
-			case ClientRemoved:
-				fmt.Printf("\nClient View Handler: Removing client %d from View", event.GetId())
-				clientview.DeleteByClient(event.GetId())
-			default:
-				fmt.Println(errors.New("Invalid client view event"))
-			}
-		}
-		fmt.Printf("\nClients ->\n\t %+v", clientview)
+func (view *ClientSessionsView) HandleEvent(newevent cqrs.Event) {
+	switch event := newevent.(type) {
+	case ClientAdded:
+		//		fmt.Printf("\nClient View Handler: Adding client %d to View", event.GetId())
+		view.RegisterClientBySession(event.Session, event.GetId())
+	case ClientSessionUpdated:
+		//		fmt.Printf("\nClient View Handler: Updating session for client %d in View", event.GetId())
+		view.DeleteByClient(event.GetId())
+		view.RegisterClientBySession(event.Session, event.GetId())
+	case ClientRemoved:
+		//		fmt.Printf("\nClient View Handler: Removing client %d from View", event.GetId())
+		view.DeleteByClient(event.GetId())
+	default:
+		fmt.Println(errors.New("Invalid client view event"))
 	}
 }
 
-func NewClientSessionsViewHandler(eventbus cqrs.EventRouter, clientview *ClientSessionsView) error {
+func (view *ClientSessionsView) HandleStream(eventchan chan cqrs.Event) {
+	for {
+		select {
+		case event := <-eventchan:
+			view.HandleEvent(event)
+		}
+		fmt.Printf("\nClients ->\n\t %+v", view)
+	}
+}
+
+func NewClientSessionsViewHandler(eventbus cqrs.EventRouter, view *ClientSessionsView) error {
 	subscription, err := eventbus.Subscribe(cqrs.ByEventTypes(
 		E_ClientAdded,
 		E_ClientSessionUpdated,
@@ -88,7 +93,7 @@ func NewClientSessionsViewHandler(eventbus cqrs.EventRouter, clientview *ClientS
 		return err
 	}
 
-	go ClientSessionsViewHandler(subscription.EventChan(), clientview)
+	go view.HandleStream(subscription.EventChan())
 
 	return nil
 }

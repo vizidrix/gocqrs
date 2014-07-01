@@ -64,7 +64,7 @@ type Command interface {
 }
 
 type CommandMemento struct {
-	Domain      uint32 `json:__domain`    // Aggregate Domain
+	Domain      uint32 `json:"__domain"`  // Aggregate Domain
 	Id          uint64 `json:"__id"`      // Aggregate Id
 	Version     uint32 `json:"__version"` // Aggregate Version
 	CommandType uint32 `json:"__ctype"`   // Command Type
@@ -108,7 +108,7 @@ type Event interface {
 }
 
 type EventMemento struct {
-	Domain    uint32 `json:__domain`    // Aggregate Domain
+	Domain    uint32 `json:"__domain"`  // Aggregate Domain
 	Id        uint64 `json:"__id"`      // Aggregate Id
 	Version   uint32 `json:"__version"` // Aggregate Version
 	EventType uint32 `json:"__etype"`   // Event Type
