@@ -1,11 +1,11 @@
-package clientsockets
+package webclientsockets
 
 import (
 	"github.com/vizidrix/gocqrs/cqrs"
 )
 
-type ClientConnection interface {
-	Client() uint64
+type WebClientConnection interface {
+	WebClient() uint64
 	EventChan() chan cqrs.Event
 	MessageChan() chan []byte
 	ExitChan() chan struct{}
@@ -13,24 +13,24 @@ type ClientConnection interface {
 
 type ConnectionMemento struct {
 	session     string
-	client      uint64
+	webclient   uint64
 	eventChan   chan cqrs.Event
 	messageChan chan []byte
 	exitChan    chan struct{}
 }
 
-func NewConnection(session string, client uint64) ConnectionMemento {
+func NewConnection(session string, webclient uint64) ConnectionMemento {
 	return ConnectionMemento{
 		session:     session,
-		client:      client,
+		webclient:   webclient,
 		eventChan:   make(chan cqrs.Event),
 		messageChan: make(chan []byte),
 		exitChan:    make(chan struct{}),
 	}
 }
 
-func (connection *ConnectionMemento) Client() uint64 {
-	return connection.client
+func (connection *ConnectionMemento) WebClient() uint64 {
+	return connection.webclient
 }
 
 func (connection *ConnectionMemento) EventChan() chan cqrs.Event {
@@ -49,10 +49,10 @@ type ConnectionService struct {
 	connections      map[uint64]*ConnectionMemento
 	addChan          chan *ConnectionMemento
 	removeChan       chan *ConnectionMemento
-	subscriptionChan chan ClientConnection
+	subscriptionChan chan WebClientConnection
 }
 
-func NewConnectionService(subscriptionchan chan ClientConnection) ConnectionService {
+func NewConnectionService(subscriptionchan chan WebClientConnection) ConnectionService {
 	return ConnectionService{
 		connections:      make(map[uint64]*ConnectionMemento),
 		addChan:          make(chan *ConnectionMemento),

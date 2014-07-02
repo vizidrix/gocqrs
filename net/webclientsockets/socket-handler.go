@@ -1,12 +1,12 @@
-package clientsockets
+package webclientsockets
 
 import (
 	"code.google.com/p/go.net/websocket"
 	"fmt"
-	"github.com/vizidrix/gocqrs/net/clients"
+	"github.com/vizidrix/gocqrs/net/webclients"
 )
 
-func HandleClientSockets(clientsessions *clients.ClientSessionsView, subscriptionchan chan ClientConnection) func(*websocket.Conn) {
+func HandleWebClientSockets(webclientsessions *webclients.WebClientSessionsView, subscriptionchan chan WebClientConnection) func(*websocket.Conn) {
 	connservice := NewConnectionService(subscriptionchan)
 
 	go func() {
@@ -19,20 +19,20 @@ func HandleClientSockets(clientsessions *clients.ClientSessionsView, subscriptio
 		defer func() { conn.Close() }()
 		session := conn.Request().FormValue("session")
 
-		client, err := clientsessions.GetBySession(session)
+		webclient, err := webclientsessions.GetBySession(session)
 
 		if err != nil {
 			fmt.Printf("\nError validating session: %v", err)
-			//	clienterr := err.NewError("invalid_session")
-			//	websocket.JSON.Send(conn, clienterr)
+			//	webclienterr := err.NewError("invalid_session")
+			//	websocket.JSON.Send(conn, webclienterr)
 			return
 		} else {
-			connection := NewConnection(session, client)
+			connection := NewConnection(session, webclient)
 			connservice.addChan <- &connection
 
 			go func() {
 				for {
-					if active := HandleClientEvent(&connservice, &connection, conn); !active {
+					if active := HandleWebClientEvent(&connservice, &connection, conn); !active {
 						return
 					}
 				}
@@ -40,7 +40,7 @@ func HandleClientSockets(clientsessions *clients.ClientSessionsView, subscriptio
 
 			go func() {
 				for {
-					if active := HandleClientMessage(&connservice, &connection, conn); !active {
+					if active := HandleWebClientMessage(&connservice, &connection, conn); !active {
 						return
 					}
 				}
@@ -61,11 +61,11 @@ func ManageConnections(connservice *ConnectionService) {
 }
 
 func AddConnection(connservice *ConnectionService, connection *ConnectionMemento) {
-	//fmt.Printf("\nRegistering ConnectionMemento: %d", connection.client)
-	if conn, active := connservice.connections[connection.client]; active {
+	//fmt.Printf("\nRegistering ConnectionMemento: %d", connection.webclient)
+	if conn, active := connservice.connections[connection.webclient]; active {
 		RemoveConnection(connservice, conn)
 	}
-	connservice.connections[connection.client] = connection
+	connservice.connections[connection.webclient] = connection
 	connservice.subscriptionChan <- connection
 }
 
@@ -73,17 +73,17 @@ func RemoveConnection(connservice *ConnectionService, connection *ConnectionMeme
 	select {
 	case <-connection.exitChan:
 	default:
-		//fmt.Printf("\nClosing out client for session: %d", connection.client)
+		//fmt.Printf("\nClosing out webclient for session: %d", connection.webclient)
 		close(connection.exitChan)
-		delete(connservice.connections, connection.client)
+		delete(connservice.connections, connection.webclient)
 	}
 }
 
-func HandleClientEvent(connservice *ConnectionService, connection *ConnectionMemento, conn *websocket.Conn) bool {
+func HandleWebClientEvent(connservice *ConnectionService, connection *ConnectionMemento, conn *websocket.Conn) bool {
 	select {
 	case event := <-connection.eventChan:
 		if err := websocket.JSON.Send(conn, event); err != nil {
-			fmt.Printf("\nError sending to Client:\n\t%v", err)
+			fmt.Printf("\nError sending to WebClient:\n\t%v", err)
 			connservice.removeChan <- connection
 			return false
 		}
@@ -93,10 +93,10 @@ func HandleClientEvent(connservice *ConnectionService, connection *ConnectionMem
 	}
 }
 
-func HandleClientMessage(connservice *ConnectionService, connection *ConnectionMemento, conn *websocket.Conn) bool {
+func HandleWebClientMessage(connservice *ConnectionService, connection *ConnectionMemento, conn *websocket.Conn) bool {
 	var message []byte
 	if err := websocket.JSON.Receive(conn, &message); err != nil {
-		fmt.Printf("\nError receiving from Client:\n\t%v", err)
+		fmt.Printf("\nError receiving from WebClient:\n\t%v", err)
 		connservice.removeChan <- connection
 		return false
 	}
@@ -109,7 +109,7 @@ func HandleClientMessage(connservice *ConnectionService, connection *ConnectionM
 }
 
 /*
-func HandleClientSockets(clientsessions *clients.ClientSessionsView, subscriptionchan chan *ConnectionMemento) func(*websocket.Conn) {
+func HandleWebClientSockets(webclientsessions *webclients.WebClientSessionsView, subscriptionchan chan *ConnectionMemento) func(*websocket.Conn) {
 	connections := make(map[uint64]*ConnectionMemento)
 	addchan := make(chan *ConnectionMemento, 1)
 	removechan := make(chan *ConnectionMemento, 1)
@@ -118,21 +118,21 @@ func HandleClientSockets(clientsessions *clients.ClientSessionsView, subscriptio
 		for {
 			select {
 			case connection := <-addchan:
-				fmt.Printf("\nRegistering ConnectionMemento: %d", connection.client)
-				if _, active := connections[connection.client]; active {
+				fmt.Printf("\nRegistering ConnectionMemento: %d", connection.webclient)
+				if _, active := connections[connection.webclient]; active {
 					removechan <- connection
 				} else {
-					connections[connection.client] = connection
+					connections[connection.webclient] = connection
 					subscriptionchan <- connection
 				}
-				fmt.Printf(("\nNew ConnectionMemento: %d"), connection.client)
+				fmt.Printf(("\nNew ConnectionMemento: %d"), connection.webclient)
 			case connection := <-removechan:
 				select {
 				case <-connection.exitChan:
 				default:
-					fmt.Printf("\nClosing out client for session: %d", connection.client)
+					fmt.Printf("\nClosing out webclient for session: %d", connection.webclient)
 					close(connection.exitChan)
-					delete(connections, connection.client)
+					delete(connections, connection.webclient)
 				}
 			}
 		}
@@ -142,27 +142,27 @@ func HandleClientSockets(clientsessions *clients.ClientSessionsView, subscriptio
 		defer func() { conn.Close() }()
 		session := conn.Request().FormValue("session")
 
-		client, err := clientsessions.GetBySession(session)
+		webclient, err := webclientsessions.GetBySession(session)
 
 		if err != nil {
 			fmt.Printf("\nError validating session: %v", err)
-			//	clienterr := err.NewError("invalid_session")
-			//	websocket.JSON.Send(conn, clienterr)
+			//	webclienterr := err.NewError("invalid_session")
+			//	websocket.JSON.Send(conn, webclienterr)
 			return
 		} else {
-			connection := NewConnectionMemento(session, client)
+			connection := NewConnectionMemento(session, webclient)
 			addchan <- &connection
 
 			//			fmt.Printf("\nNew connection %s", session)
-			//			fmt.Printf("\nConnectionMemento %s connecting client infrastructure...", sessionid)
+			//			fmt.Printf("\nConnectionMemento %s connecting webclient infrastructure...", sessionid)
 
 			go func() {
-				//				defer func() { fmt.Println("Ending client event stream") }()
+				//				defer func() { fmt.Println("Ending webclient event stream") }()
 				for {
 					select {
 					case event := <-connection.eventChan:
 						if err := websocket.JSON.Send(conn, event); err != nil {
-							fmt.Printf("\nError sending to Client:\n\t%v", err)
+							fmt.Printf("\nError sending to WebClient:\n\t%v", err)
 							removechan <- &connection
 							return
 						}
@@ -176,15 +176,15 @@ func HandleClientSockets(clientsessions *clients.ClientSessionsView, subscriptio
 				for {
 					var message []byte
 					if err := websocket.JSON.Receive(conn, &message); err != nil {
-						fmt.Printf("\nReceived %+v from Client", message)
-						fmt.Printf("\nError receiving from Client:\n\t%v", err)
+						fmt.Printf("\nReceived %+v from WebClient", message)
+						fmt.Printf("\nError receiving from WebClient:\n\t%v", err)
 						removechan <- &connection
 						return
 					}
-					fmt.Printf("\nMessage received from client %d: %v", connection.client, message)
+					fmt.Printf("\nMessage received from webclient %d: %v", connection.webclient, message)
 					select {
 					case connection.messageChan <- message:
-						fmt.Printf("\nMessage from client %d passed to connection handler", connection.client)
+						fmt.Printf("\nMessage from webclient %d passed to connection handler", connection.webclient)
 					case <-connection.exitChan:
 						return
 					}

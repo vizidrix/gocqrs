@@ -9,24 +9,24 @@ var DOMAIN_NAME = "correlations"
 var DOMAIN uint32 = 0xE7ECE41A
 
 var (
-	C_AddClient    uint64 = cqrs.C(DOMAIN, 1, 1)
-	C_ExpireClient uint64 = cqrs.C(DOMAIN, 1, 2)
+	C_AddClientUser    uint64 = cqrs.C(DOMAIN, 1, 1)
+	C_ExpireClientUser uint64 = cqrs.C(DOMAIN, 1, 2)
 )
 
 var (
-	E_ClientAdded   uint64 = cqrs.E(DOMAIN, 1, 1)
-	E_ClientExpired uint64 = cqrs.E(DOMAIN, 1, 2)
+	E_ClientUserAdded   uint64 = cqrs.E(DOMAIN, 1, 1)
+	E_ClientUserExpired uint64 = cqrs.E(DOMAIN, 1, 2)
 )
 
 /* Domain */
 
-type ClientMemento struct {
+type ClientUserMemento struct {
 	cqrs.AggregateMemento
 	SessionId int `json:"session"` // 128 bit hex
 }
 
-func NewClient(id uint64, session int, client uint64) ClientMemento {
-	return ClientMemento{
+func NewClientUser(id uint64, session int, clientuser uint64) ClientUserMemento {
+	return ClientUserMemento{
 		AggregateMemento: cqrs.NewAggregate(DOMAIN, id, 0),
 		SessionId:        session,
 	}
@@ -34,30 +34,30 @@ func NewClient(id uint64, session int, client uint64) ClientMemento {
 
 type CorrelatedCommand interface {
 	cqrs.Command
-	GetClientId() uint64
+	GetClientUserId() uint64
 	GetCorrelation() uint64
 }
 
 type CorrelatedEvent interface {
 	cqrs.Event
-	GetClientId() uint64
+	GetClientUserId() uint64
 	GetCorrelation() uint64
 }
 
 type CorrelationMemento struct {
-	ClientId    uint64 `json:"__clientid"`
-	Correlation uint64 `json:"__correlation"`
+	ClientUserId uint64 `json:"__userid"`
+	Correlation  uint64 `json:"__correlation"`
 }
 
-func NewCorrelation(clientid uint64, correlation uint64) CorrelationMemento {
+func NewCorrelation(clientuserid uint64, correlation uint64) CorrelationMemento {
 	return CorrelationMemento{
-		ClientId:    clientid,
-		Correlation: correlation,
+		ClientUserId: clientuserid,
+		Correlation:  correlation,
 	}
 }
 
-func (correlation CorrelationMemento) GetClientId() uint64 {
-	return correlation.ClientId
+func (correlation CorrelationMemento) GetClientUserId() uint64 {
+	return correlation.ClientUserId
 }
 
 func (correlation CorrelationMemento) GetCorrelation() uint64 {
@@ -66,58 +66,58 @@ func (correlation CorrelationMemento) GetCorrelation() uint64 {
 
 /* Commands */
 
-type AddClient struct {
+type AddClientUser struct {
 	cqrs.CommandMemento
 	SessionId int `json:"session"`
 }
 
-func NewAddClient(id uint64, session int) AddClient {
-	return AddClient{
-		CommandMemento: cqrs.NewCommand(DOMAIN, id, 0, C_AddClient),
+func NewAddClientUser(id uint64, session int) AddClientUser {
+	return AddClientUser{
+		CommandMemento: cqrs.NewCommand(DOMAIN, id, 0, C_AddClientUser),
 		SessionId:      session,
 	}
 }
 
-type ExpireClient struct {
+type ExpireClientUser struct {
 	cqrs.CommandMemento
 }
 
-func NewExpireClient(id uint64, version uint32) ExpireClient {
-	return ExpireClient{
-		CommandMemento: cqrs.NewCommand(DOMAIN, id, version, C_ExpireClient),
+func NewExpireClientUser(id uint64, version uint32) ExpireClientUser {
+	return ExpireClientUser{
+		CommandMemento: cqrs.NewCommand(DOMAIN, id, version, C_ExpireClientUser),
 	}
 }
 
 /* Events */
 
-type ClientAdded struct {
+type ClientUserAdded struct {
 	cqrs.EventMemento
 	SessionId int `json:"session"`
 }
 
-func (event ClientAdded) String() string {
+func (event ClientUserAdded) String() string {
 	return fmt.Sprintf(" <E [ <A D[%d] ID[%d] V[%d] \\> -> E[%d] ] E\\> ",
-		event.GetDomain(), event.GetId(), event.GetVersion(), "Client Added")
+		event.GetDomain(), event.GetId(), event.GetVersion(), "Client User Added")
 }
 
-func NewClientAdded(id uint64, session int) ClientAdded {
-	return ClientAdded{
-		EventMemento: cqrs.NewEvent(DOMAIN, id, 0, E_ClientAdded),
+func NewClientUserAdded(id uint64, session int) ClientUserAdded {
+	return ClientUserAdded{
+		EventMemento: cqrs.NewEvent(DOMAIN, id, 0, E_ClientUserAdded),
 		SessionId:    session,
 	}
 }
 
-type ClientExpired struct {
+type ClientUserExpired struct {
 	cqrs.EventMemento
 }
 
-func (event ClientExpired) String() string {
+func (event ClientUserExpired) String() string {
 	return fmt.Sprintf(" <E [ <A D[%d] ID[%d] V[%d] \\> -> E[%d] ] E\\> ",
-		event.GetDomain(), event.GetId(), event.GetVersion(), "Client Expired")
+		event.GetDomain(), event.GetId(), event.GetVersion(), "Client User Expired")
 }
 
-func NewClientExpired(id uint64, version uint32) ClientExpired {
-	return ClientExpired{
-		EventMemento: cqrs.NewEvent(DOMAIN, id, version, E_ClientExpired),
+func NewClientUserExpired(id uint64, version uint32) ClientUserExpired {
+	return ClientUserExpired{
+		EventMemento: cqrs.NewEvent(DOMAIN, id, version, E_ClientUserExpired),
 	}
 }
