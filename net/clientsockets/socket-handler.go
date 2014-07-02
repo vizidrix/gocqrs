@@ -63,11 +63,10 @@ func ManageConnections(connservice *ConnectionService) {
 func AddConnection(connservice *ConnectionService, connection *ConnectionMemento) {
 	//fmt.Printf("\nRegistering ConnectionMemento: %d", connection.client)
 	if conn, active := connservice.connections[connection.client]; active {
-		go func() { connservice.removeChan <- conn; connservice.addChan <- connection }()
-	} else {
-		connservice.connections[connection.client] = connection
-		connservice.subscriptionChan <- connection
+		RemoveConnection(connservice, conn)
 	}
+	connservice.connections[connection.client] = connection
+	connservice.subscriptionChan <- connection
 }
 
 func RemoveConnection(connservice *ConnectionService, connection *ConnectionMemento) {
