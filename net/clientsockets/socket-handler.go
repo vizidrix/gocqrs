@@ -7,11 +7,12 @@ import (
 )
 
 func HandleClientSockets(clientsessions *clients.ClientSessionsView, subscriptionchan chan ClientConnection) func(*websocket.Conn) {
-	addchan := make(chan *ConnectionMemento, 1)
-	removechan := make(chan *ConnectionMemento, 1)
+	connservice := NewConnectionService(subscriptionchan)
 
 	go func() {
-		ManageConnectionMementos(addchan, removechan, subscriptionchan)
+		for {
+			ManageConnections(&connservice)
+		}
 	}()
 
 	return func(conn *websocket.Conn) {
@@ -27,11 +28,11 @@ func HandleClientSockets(clientsessions *clients.ClientSessionsView, subscriptio
 			return
 		} else {
 			connection := NewConnection(session, client)
-			addchan <- &connection
+			connservice.addChan <- &connection
 
 			go func() {
 				for {
-					if active := HandleClientEvent(conn, &connection, removechan); !active {
+					if active := HandleClientEvent(&connservice, &connection, conn); !active {
 						return
 					}
 				}
@@ -39,7 +40,7 @@ func HandleClientSockets(clientsessions *clients.ClientSessionsView, subscriptio
 
 			go func() {
 				for {
-					if active := HandleClientMessage(conn, &connection, removechan); !active {
+					if active := HandleClientMessage(&connservice, &connection, conn); !active {
 						return
 					}
 				}
@@ -50,37 +51,41 @@ func HandleClientSockets(clientsessions *clients.ClientSessionsView, subscriptio
 	}
 }
 
-func ManageConnectionMementos(addchan chan *ConnectionMemento, removechan chan *ConnectionMemento, subscriptionchan chan ClientConnection) {
-	connections := make(map[uint64]*ConnectionMemento)
-	for {
-		select {
-		case connection := <-addchan:
-			fmt.Printf("\nRegistering ConnectionMemento: %d", connection.client)
-			if _, active := connections[connection.client]; active {
-				removechan <- connection
-			} else {
-				connections[connection.client] = connection
-				subscriptionchan <- connection
-			}
-			fmt.Printf(("\nNew ConnectionMemento: %d"), connection.client)
-		case connection := <-removechan:
-			select {
-			case <-connection.exitChan:
-			default:
-				fmt.Printf("\nClosing out client for session: %d", connection.client)
-				close(connection.exitChan)
-				delete(connections, connection.client)
-			}
-		}
+func ManageConnections(connservice *ConnectionService) {
+	select {
+	case connection := <-connservice.addChan:
+		AddConnection(connservice, connection)
+	case connection := <-connservice.removeChan:
+		RemoveConnection(connservice, connection)
 	}
 }
 
-func HandleClientEvent(conn *websocket.Conn, connection *ConnectionMemento, removechan chan *ConnectionMemento) bool {
+func AddConnection(connservice *ConnectionService, connection *ConnectionMemento) {
+	//fmt.Printf("\nRegistering ConnectionMemento: %d", connection.client)
+	if conn, active := connservice.connections[connection.client]; active {
+		go func() { connservice.removeChan <- conn; connservice.addChan <- connection }()
+	} else {
+		connservice.connections[connection.client] = connection
+		connservice.subscriptionChan <- connection
+	}
+}
+
+func RemoveConnection(connservice *ConnectionService, connection *ConnectionMemento) {
+	select {
+	case <-connection.exitChan:
+	default:
+		//fmt.Printf("\nClosing out client for session: %d", connection.client)
+		close(connection.exitChan)
+		delete(connservice.connections, connection.client)
+	}
+}
+
+func HandleClientEvent(connservice *ConnectionService, connection *ConnectionMemento, conn *websocket.Conn) bool {
 	select {
 	case event := <-connection.eventChan:
 		if err := websocket.JSON.Send(conn, event); err != nil {
 			fmt.Printf("\nError sending to Client:\n\t%v", err)
-			removechan <- connection
+			connservice.removeChan <- connection
 			return false
 		}
 		return true
@@ -89,11 +94,11 @@ func HandleClientEvent(conn *websocket.Conn, connection *ConnectionMemento, remo
 	}
 }
 
-func HandleClientMessage(conn *websocket.Conn, connection *ConnectionMemento, removechan chan *ConnectionMemento) bool {
+func HandleClientMessage(connservice *ConnectionService, connection *ConnectionMemento, conn *websocket.Conn) bool {
 	var message []byte
 	if err := websocket.JSON.Receive(conn, &message); err != nil {
 		fmt.Printf("\nError receiving from Client:\n\t%v", err)
-		removechan <- connection
+		connservice.removeChan <- connection
 		return false
 	}
 	select {
