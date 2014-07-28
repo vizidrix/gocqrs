@@ -1,3 +1,0 @@
-
-//SessionStarted
-//StartSession
