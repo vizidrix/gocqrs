@@ -109,7 +109,7 @@ type EventStoreReaderWriter interface {
 	EventStoreReader
 }
 
-// AggregateIdGenerator is esponsible for creating valid unique Ids for Aggregates
+// AggregateIdGenerator is responsible for creating valid unique Ids for Aggregates
 type AggregateIdGenerater interface {
 	//GenerateAggregateId(application uint32, domain uint32) (uint64, error)
 	GenerateAggregateId() (uint64, error)
@@ -212,10 +212,10 @@ type InformedDeserializer interface {
 
 // aggregate is a structured header describing the UUId of an aggregate instance
 type aggregate struct {
-	// application is the target aggregate belongs to, provides multi-tenancy
+	// application the target aggregate belongs to, provides multi-tenancy
 	// at the application level partition for like domains within the same service
 	application uint32 `json:"_app"`
-	// domain is type of aggregate (type is semantically equivalent to doman)
+	// domain is the type of aggregate (type is semantically equivalent to doman)
 	domain      uint32 `json:"_domain"`
 	// id is an [application / domain] unique identifier for the aggregate instance
 	// and should never be duplicated within that partition
