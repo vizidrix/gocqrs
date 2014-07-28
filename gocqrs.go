@@ -122,10 +122,10 @@ type EventStoreWriter interface {
 
 // Responsible for serving Streams as queries against the EventStore
 type EventStoreReader interface {
+	LoadEvents() ([]Event, error)
 	LoadEventsByAggregate(aggregate uint64) ([]Event, error)
 	LoadEventsByEventType(eventType uint32) ([]Event, error)
-	LoadEventsByMultipleEventTypes(eventTypes ...uint32) ([]Event, error)
-	LoadEventsByDomain() ([]Event, error)
+	LoadEventsByEventTypes(eventTypes ...uint32) ([]Event, error)
 }
 /*
 type EventStoreReader interface {
