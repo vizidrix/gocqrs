@@ -157,8 +157,11 @@ type Command interface {
 // a populated aggregate instance
 type HydrateAggregate func([]Event)(Aggregate, error)
 
+// ApplyCommand describes a method which, given an aggregate instance and a command,
+// attempts to apply the command's intent then reports back success/fail event
 type ApplyCommand func(aggregate Aggregate, command Command)(Event, error)
 
+// PublishEvent describes a method which broadcasts an event to a pub/sub
 type PublishEvent func(event Event)(error)
 
 // CommandHandler describes a type that can be used to process commands
