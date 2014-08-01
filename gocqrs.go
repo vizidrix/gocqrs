@@ -184,7 +184,7 @@ type EventHandler interface {
 
 // EventSerializerDeSerializer  describes a type that can be used to
 // either serialize or deserialize an Event to/from a byte slice
-type EventSerializerDeSerializer interface {
+type EventSerializerDeserializer interface {
 	EventSerializer
 	EventDeserializer
 }
@@ -201,7 +201,7 @@ type EventDeserializer interface {
 	DeserializeEvent([]byte) (Event, error)
 }
 
-type InformedSerialConverter interface {
+type InformedSerializerDeserializer interface {
 	EventSerializer
 	InformedDeserializer
 }
@@ -308,7 +308,15 @@ type commandHandler struct {
 // NewCommandHandler provides a strongly typed list of dependencies needed to boot
 // a generalized command handler
 // Custom initializers could be built over this format to reduce the parameter list
-func NewCommandHandler(reader EventStoreReader, writer EventStoreWriter, idgen AggregateIdGenerater, hydrator HydrateAggregate, applicator ApplyCommand, publisher PublishEvent, application uint32, domain uint32) CommandHandler {
+func NewCommandHandler(
+	reader EventStoreReader,
+	writer EventStoreWriter,
+	idgen AggregateIdGenerater,
+	hydrator HydrateAggregate,
+	applicator ApplyCommand,
+	publisher PublishEvent,
+	application uint32, domain uint32,
+) CommandHandler {
 	return &commandHandler{
 		reader:      reader,
 		writer:      writer,
