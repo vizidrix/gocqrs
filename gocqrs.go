@@ -166,9 +166,6 @@ type PublishEvent func(event Event) error
 
 // CommandHandler describes a type that can be used to process commands
 type CommandHandler interface {
-	HydrateAggregate([]Event) (Aggregate, error)
-	ApplyCommand(Aggregate, Command) (Event, error)
-	PublishEvent(Event) error
 	Handle(command Command) error
 }
 
