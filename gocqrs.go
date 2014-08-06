@@ -10,7 +10,6 @@ var (
 	//ErrUsedTimestamp  = errors.New("timestamp used")
 	//ErrUsedKey        = errors.New("datastore key used")
 
-	
 	// ErrInvalidApplication is used to inform a consumer when they've
 	// provided an aggregate that doesn't have a valid application id
 	// that the receiving service is able to process
@@ -32,7 +31,7 @@ var (
 	// provided an aggregate with a version that cannot be sync'd
 	// with the current domain version
 	ErrInvalidVersion = errors.New("invalid aggregate version")
-	
+
 	// ErrInvalidCommandType is used to inform a consumer when they've
 	// provided a command type that isn't valid for the application and
 	// domain partition
@@ -71,13 +70,13 @@ type TypeBuilder func(uint8, uint32) uint32
 // MakeVersionedCommandType provides a utility to union a command's version and
 // type identifiers and masks off the leftmost bit as 1 to indicate a command
 func MakeVersionedCommandType(version uint8, typeId uint32) uint32 {
-	return 0x80000000 | (uint32(version) << 24  & 0x7F000000) | (typeId & 0xFFFFFF)
+	return 0x80000000 | (uint32(version) << 24 & 0x7F000000) | (typeId & 0xFFFFFF)
 }
 
 // MakeVersionedEventType provides a utility to union an event's version and
 // type identifiers and masks off the leftmost bit as 0 to indicate an event
 func MakeVersionedEventType(version uint8, typeId uint32) uint32 {
-	return 0x7FFFFFFF & (uint32(version) << 24  & 0x7F000000) | (typeId & 0xFFFFFF)
+	return 0x7FFFFFFF&(uint32(version)<<24&0x7F000000) | (typeId & 0xFFFFFF)
 }
 
 // EventStoreReaderWriter describes a type the can be used to either read
@@ -88,7 +87,7 @@ type EventStoreReaderWriterGenerator interface {
 	EventStoreReader
 }
 
-// AggregateIdGenerator is esponsible for creating valid unique Ids for Aggregates
+// AggregateIdGenerator is responsible for creating valid unique Ids for Aggregates
 type AggregateIdGenerater interface {
 	//GenerateAggregateId(application uint32, domain uint32) (uint64, error)
 	GenerateAggregateId() (uint64, error)
@@ -132,7 +131,7 @@ type Command interface {
 
 // CommandHandler describes a type that can be used to process commands
 type CommandHandler interface {
-	Handle(command Command) (error)
+	Handle(command Command) error
 }
 
 // CommandSerializerDeSerializer  describes a type that can be used to
@@ -219,18 +218,18 @@ type TypedEventDeserializer interface {
 
 // aggregate is a structured header describing the UUId of an aggregate instance
 type aggregate struct {
-	// application is the target aggregate belongs to, provides multi-tenancy
+	// application the target aggregate belongs to, provides multi-tenancy
 	// at the application level partition for like domains within the same service
 	application uint32 `json:"_app"`
-	// domain is type of aggregate (type is semantically equivalent to doman)
-	domain      uint32 `json:"_domain"`
+	// domain is the type of aggregate (type is semantically equivalent to doman)
+	domain uint32 `json:"_domain"`
 	// id is an [application / domain] unique identifier for the aggregate instance
 	// and should never be duplicated within that partition
-	id          uint64 `json:"_id"`
+	id uint64 `json:"_id"`
 	// version is derived from the number of events applied to the aggregate
 	// and provides guaranteed event ordering within it's
 	// [appliction / domain / id] partition
-	version     uint32 `json:"_ver"`
+	version uint32 `json:"_ver"`
 }
 
 // NewAggregate creates an aggregate instance with UUId derived from the provided values
@@ -274,21 +273,21 @@ type command struct {
 	// to the target aggregate by capturing the aggregate's full UUId
 	// partition information [ application / domain / id / version ]
 	aggregate
-	// commandType is an [ application / domain ] unique identifier for the type of 
+	// commandType is an [ application / domain ] unique identifier for the type of
 	// command message which captures the semantic intent of the command
-	commandType   uint32 `json:"_ctype"`
+	commandType uint32 `json:"_ctype"`
 }
 
 // NewCommand creates a command instance with UUID derived from the provided values
 // including the header of the targeted aggregate instance
 func NewCommand(application uint32, domain uint32, id uint64, version uint32, commandType uint32) Command {
-	return &command {
-		aggregate: aggregate {
+	return &command{
+		aggregate: aggregate{
 			application: application,
-			domain: domain,
-			id: id,
-			version: version,
-			},
+			domain:      domain,
+			id:          id,
+			version:     version,
+		},
 		commandType: commandType,
 	}
 }
@@ -305,21 +304,21 @@ type event struct {
 	// to the target aggregate by capturing the aggregate's full UUId
 	// partition information [ application / domain / id / version ]
 	aggregate
-	// eventType is an [ application / domain ] unique identifier for the type of 
+	// eventType is an [ application / domain ] unique identifier for the type of
 	// event message which captures the semantic intent of the event
-	eventType   uint32 `json:"_etype"`
+	eventType uint32 `json:"_etype"`
 }
 
 // NewEvent creates an event instance with UUID derived from the provided values
 // including the header of the targeted aggregate instance
 func NewEvent(application uint32, domain uint32, id uint64, version uint32, eventType uint32) Event {
 	return &event{
-		aggregate: aggregate {
+		aggregate: aggregate{
 			application: application,
-			domain: domain,
-			id: id,
-			version: version,
-			},
+			domain:      domain,
+			id:          id,
+			version:     version,
+		},
 		eventType: eventType,
 	}
 }
