@@ -331,38 +331,38 @@ func (event *event) GetEventType() uint32 {
 
 // AggregateLoader describes a function which takes a slice of events and
 // produces either a valid aggregate or an error
-type AggregateLoader func([]gocqrs.Event)(gocqrs.Aggregate, err)
+type AggregateLoader func([]Event)(Aggregate, error)
 
 // CommandEvaluator describes a function which evaluates a 
-type CommandEvaluator func(gocqrs.AggregateIdGenerater, gocqrs.Aggregate, gocqrs.Command)(gocqrs.Event, err)
+type CommandEvaluator func(AggregateIdGenerater, Aggregate, Command)(Event, error)
 
 // DefaultCommandHandler provides a base implementation for domain specific command
 // handlers to use if they follow a standard execution path
-func DefaultCommandHandler(eventStore EventStoreReaderWriterGenerator, publisher EventPublisher, loader AggregateLoader, evaluator CommandEvaluator) (err error) {
+func DefaultCommandHandler(eventStore EventStoreReaderWriterGenerator, publisher EventPublisher, loader AggregateLoader, evaluator CommandEvaluator, command Command) (err error) {
 	// Read the events from the store
 	events, err := eventStore.LoadEventsByAggregate(command.GetId())
 	if err != nil {
-		return gocqrs.ErrUnableToFindAggregate
+		return ErrUnableToFindAggregate
 	}
 	// Populate an aggregate using the retrieved events
 	aggregate, err := loader(events)
 	if err != nil {
-		return gocqrs.ErrUnableToLoadAggregate
+		return ErrUnableToLoadAggregate
 	}
 	// Evaluate the command against the aggregate
-	event, err := evaluator(handler.eventStore, aggregate, command)
+	event, err := evaluator(eventStore, aggregate, command)
 	if err != nil {
-		return gocqrs.ErrErrorApplyingCommand
+		return ErrErrorApplyingCommand
 	}
 	// Commit the event to the eventstore
 	_, err = eventStore.AppendEvent(event)
 	if err != nil {
-		return gocqrs.ErrErrorAppendingEvent
+		return ErrErrorAppendingEvent
 	}
 	// Broadcast the created event to all observers
 	err = publisher.Publish(event)
 	if err != nil {
-		return gocqrs.ErrErrorPublishingEvent
+		return ErrErrorPublishingEvent
 	}
 	return err
 }
