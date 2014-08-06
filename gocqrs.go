@@ -66,28 +66,7 @@ var (
 	ErrErrorPublishingEvent = errors.New("error publishing the event")
 )
 
-/*
-TODO: Re-add or Re-move the following...
-type CommandSerialConverter interface {
-	CommandSerializer
-	CommandDeserializer
-}
-
-type CommandSerializer interface {
-	SerializeCommand(Command) ([]byte, error)
-}
-
-type CommandDeserializer interface {
-	DeserializeCommand([]byte) (Command, error)
-}
-
-func GetCommandTypeFromJson(jsonCommand []byte) (commandType uint64, err error) {
-	var command CommandMemento
-	err = json.Unmarshal(jsonCommand, &command)
-	return command.GetCommandType(), err
-}
-
-*/
+type TypeBuilder func(uint8, uint32) uint32
 
 // MakeVersionedCommandType provides a utility to union a command's version and
 // type identifiers and masks off the leftmost bit as 1 to indicate a command
@@ -103,7 +82,7 @@ func MakeVersionedEventType(version uint8, typeId uint32) uint32 {
 
 // EventStoreReaderWriter describes a type the can be used to either read
 // or write events to an eventstore
-type EventStoreReaderWriter interface {
+type EventStoreReaderWriterGenerator interface {
 	AggregateIdGenerater
 	EventStoreWriter
 	EventStoreReader
@@ -127,14 +106,6 @@ type EventStoreReader interface {
 	LoadEventsByEventType(eventType uint32) ([]Event, error)
 	LoadEventsByEventTypes(eventTypes ...uint32) ([]Event, error)
 }
-/*
-type EventStoreReader interface {
-	LoadEventsByAggregate(application uint32, domain uint32, aggregate uint64) ([]Event, error)
-	LoadEventsByEventType(application uint32, domain uint32, eventType uint32) ([]Event, error)
-	LoadEventsByMultipleEventTypes(application uint32, domain uint32, eventTypes ...uint32) ([]Event, error)
-	LoadEventsByDomain(application uint32, domain uint32) ([]Event, error)
-}
-*/
 
 // Aggregate provides a base interface for things that contain
 // aggregate header information
@@ -145,6 +116,12 @@ type Aggregate interface {
 	GetVersion() uint32
 }
 
+// AggregateHydrator describes a type which processes a slice of events to produce
+// a populated aggregate instance
+type AggregateHydrator interface {
+	LoadAggregate([]event) (Aggregate, error)
+}
+
 // Command provides a base interface for all commands in the
 // system which includes aggregate header information to identity
 // the target of the command
@@ -153,20 +130,41 @@ type Command interface {
 	GetCommandType() uint32
 }
 
-// AggregateHydrator describes a method which processes a slice of events to produce
-// a populated aggregate instance
-type HydrateAggregate func([]Event)(Aggregate, error)
-
-// ApplyCommand describes a method which, given an aggregate instance and a command,
-// attempts to apply the command's intent then reports back success/fail event
-type ApplyCommand func(aggregate Aggregate, command Command)(Event, error)
-
-// PublishEvent describes a method which broadcasts an event to a pub/sub
-type PublishEvent func(event Event)(error)
-
 // CommandHandler describes a type that can be used to process commands
 type CommandHandler interface {
 	Handle(command Command) (error)
+}
+
+// CommandSerializerDeSerializer  describes a type that can be used to
+// either serialize or deserialize a Command to/from a byte slice
+type CommandSerializerDeserializer interface {
+	CommandSerializer
+	CommandDeserializer
+}
+
+// CommandSerializer describes a type that can be used to serialize
+// Commands to a raw byte slice
+type CommandSerializer interface {
+	Serialize(Command) ([]byte, error)
+}
+
+// CommandDeserializer describes a type that can be used to deserialize
+// Commands from a raw byte slice
+type CommandDeserializer interface {
+	Deserialize([]byte) (Command, error)
+}
+
+// TypedCommandSerializerDeserializer describes a type that can be used to serialize
+// or deserialize Cp,,amds from a raw byte slice given the commandType
+type TypedCommandSerializerDeserializer interface {
+	CommandSerializer
+	TypedCommandDeserializer
+}
+
+// TypedCommandDeserializer describes a type that can be used to deserialize
+// Command from a raw byte slice given the commandType
+type TypedCommandDeserializer interface {
+	Deserialize(uint32, []byte) (Command, error)
 }
 
 // Event provides a base interface for all events in the system
@@ -177,6 +175,11 @@ type Event interface {
 	GetEventType() uint32
 }
 
+// EventPublisher describes a type that can be used to publish events to a bus
+type EventPublisher interface {
+	Publish(Event) (error)
+}
+
 // EventHandler describes a type that can be used to process events
 type EventHandler interface {
 	Handle(event Event) (time.Time, error)
@@ -184,7 +187,7 @@ type EventHandler interface {
 
 // EventSerializerDeSerializer  describes a type that can be used to
 // either serialize or deserialize an Event to/from a byte slice
-type EventSerializerDeSerializer interface {
+type EventSerializerDeserializer interface {
 	EventSerializer
 	EventDeserializer
 }
@@ -192,22 +195,26 @@ type EventSerializerDeSerializer interface {
 // EventSerializer describes a type that can be used to serialize
 // Events to a raw byte slice
 type EventSerializer interface {
-	SerializeEvent(Event) ([]byte, error)
+	Serialize(Event) ([]byte, error)
 }
 
 // EventDeserializer describes a type that can be used to deserialize
 // Events from a raw byte slice
 type EventDeserializer interface {
-	DeserializeEvent([]byte) (Event, error)
+	Deserialize([]byte) (Event, error)
 }
 
-type InformedSerialConverter interface {
+// TypedEventSerializerDeserializer describes a type that can be used to serialize
+// or deserialize Events from a raw byte slice given the eventType
+type TypedEventSerializerDeserializer interface {
 	EventSerializer
-	InformedDeserializer
+	TypedEventDeserializer
 }
 
-type InformedDeserializer interface {
-	InformedDeserializeEvent(uint32, []byte) (Event, error)
+// TypedEventDeserializer describes a type that can be used to deserialize
+// Events from a raw byte slice given the eventType
+type TypedEventDeserializer interface {
+	Deserialize(uint32, []byte) (Event, error)
 }
 
 // aggregate is a structured header describing the UUId of an aggregate instance
@@ -292,73 +299,6 @@ func (command *command) GetCommandType() uint32 {
 	return command.commandType
 }
 
-// commandHandler is a container which wraps all the dependencies needed for
-// the general command handler case to perform all of it's related duties
-type commandHandler struct {
-	reader 		EventStoreReader
-	writer 		EventStoreWriter
-	hydrator 	HydrateAggregate
-	applicator 	ApplyCommand
-	publisher 	PublishEvent
-	application uint32
-	domain 		uint32
-}
-
-// NewCommandHandler provides a strongly typed list of dependencies needed to boot
-// a generalized command handler
-// Custom initializers could be built over this format to reduce the parameter list
-func NewCommandHandler(reader EventStoreReader, writer EventStoreWriter, hydrator HydrateAggregate, applicator ApplyCommand, publisher PublishEvent, application uint32, domain uint32) (CommandHandler) {
-	return &commandHandler {
-		reader: reader,
-		writer: writer,
-		hydrator: hydrator,
-		applicator: applicator,
-		publisher: publisher,
-		application: application,
-		domain: domain,
-	}
-}
-
-// Handle processes the provided command throgh the necessary steps to validate
-// the command, load the events from the store, populate the aggregate, apply
-// the command, append the resulting event and, finally, publish the event
-// TODO: Create an async Handle option
-func (c *commandHandler) Handle(command Command) (error) {
-	// Validate the partition of the command
-	if c.application != command.GetApplication() {
-		return ErrInvalidApplication
-	}
-	if c.domain != command.GetDomain() {
-		return ErrInvalidDomain
-	}
-	// Read the events from the store
-	events, err := c.reader.LoadEventsByAggregate(command.GetId())
-	if err != nil {
-		return ErrUnableToFindAggregate
-	}
-	// Populate an aggregate using the retrieved events
-	aggregate, err := c.hydrator(events)
-	if err != nil {
-		return ErrUnableToLoadAggregate
-	}
-	// Evaluate the command against the aggregate
-	event, err := c.applicator(aggregate, command)
-	if err != nil {
-		return ErrErrorApplyingCommand
-	}
-	// Commit the event to the eventstore
-	_, err = c.writer.AppendEvent(event)
-	if err != nil {
-		return ErrErrorAppendingEvent
-	}
-	// Broadcast the created event to all observers
-	err = c.publisher(event)
-	if err != nil {
-		return ErrErrorPublishingEvent
-	}
-	return err
-}
-
 // event is a structured header describing the UUID of an Event instance
 type event struct {
 	// aggregate is the base structure that binds the event instance
@@ -388,4 +328,42 @@ func NewEvent(application uint32, domain uint32, id uint64, version uint32, even
 // the [ application / domain ] partition
 func (event *event) GetEventType() uint32 {
 	return event.eventType
+}
+
+// AggregateLoader describes a function which takes a slice of events and
+// produces either a valid aggregate or an error
+type AggregateLoader func([]gocqrs.Event)(gocqrs.Aggregate, err)
+
+// CommandEvaluator describes a function which evaluates a 
+type CommandEvaluator func(gocqrs.AggregateIdGenerater, gocqrs.Aggregate, gocqrs.Command)(gocqrs.Event, err)
+
+// DefaultCommandHandler provides a base implementation for domain specific command
+// handlers to use if they follow a standard execution path
+func DefaultCommandHandler(eventStore EventStoreReaderWriterGenerator, publisher EventPublisher, loader AggregateLoader, evaluator CommandEvaluator) (err error) {
+	// Read the events from the store
+	events, err := eventStore.LoadEventsByAggregate(command.GetId())
+	if err != nil {
+		return gocqrs.ErrUnableToFindAggregate
+	}
+	// Populate an aggregate using the retrieved events
+	aggregate, err := loader(events)
+	if err != nil {
+		return gocqrs.ErrUnableToLoadAggregate
+	}
+	// Evaluate the command against the aggregate
+	event, err := evaluator(handler.eventStore, aggregate, command)
+	if err != nil {
+		return gocqrs.ErrErrorApplyingCommand
+	}
+	// Commit the event to the eventstore
+	_, err = eventStore.AppendEvent(event)
+	if err != nil {
+		return gocqrs.ErrErrorAppendingEvent
+	}
+	// Broadcast the created event to all observers
+	err = publisher.Publish(event)
+	if err != nil {
+		return gocqrs.ErrErrorPublishingEvent
+	}
+	return err
 }
