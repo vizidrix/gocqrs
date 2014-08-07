@@ -176,7 +176,7 @@ type Event interface {
 
 // EventPublisher describes a type that can be used to publish events to a bus
 type EventPublisher interface {
-	Publish(Event) (error)
+	Publish(Event) error
 }
 
 // EventHandler describes a type that can be used to process events
@@ -220,43 +220,43 @@ type TypedEventDeserializer interface {
 type aggregate struct {
 	// application the target aggregate belongs to, provides multi-tenancy
 	// at the application level partition for like domains within the same service
-	application uint32 `json:"_app"`
+	Application uint32 `json:"_app"`
 	// domain is the type of aggregate (type is semantically equivalent to doman)
-	domain uint32 `json:"_domain"`
+	Domain uint32 `json:"_domain"`
 	// id is an [application / domain] unique identifier for the aggregate instance
 	// and should never be duplicated within that partition
-	id uint64 `json:"_id"`
+	Id uint64 `json:"_id"`
 	// version is derived from the number of events applied to the aggregate
 	// and provides guaranteed event ordering within it's
 	// [appliction / domain / id] partition
-	version uint32 `json:"_ver"`
+	Version uint32 `json:"_ver"`
 }
 
 // NewAggregate creates an aggregate instance with UUId derived from the provided values
 func NewAggregate(application uint32, domain uint32, id uint64, version uint32) Aggregate {
 	return &aggregate{
-		application: application,
-		domain:      domain,
-		id:          id,
-		version:     version,
+		Application: application,
+		Domain:      domain,
+		Id:          id,
+		Version:     version,
 	}
 }
 
 // GetApplication returns the application id this aggregate
 // was designed within
 func (aggregate *aggregate) GetApplication() uint32 {
-	return aggregate.application
+	return aggregate.Application
 }
 
 // GetDomain returns the domain (or aggregate type) of this aggregate
 func (aggregate *aggregate) GetDomain() uint32 {
-	return aggregate.domain
+	return aggregate.Domain
 }
 
 // GetId returns the id of the aggregate which is unique within the
 // partition provided by the combination of application and domain
 func (aggregate *aggregate) GetId() uint64 {
-	return aggregate.id
+	return aggregate.Id
 }
 
 // GetVersion returns the version of the aggregate represented by
@@ -264,7 +264,7 @@ func (aggregate *aggregate) GetId() uint64 {
 // just the version state of the aggregate when this instance was
 // loaded
 func (aggregate *aggregate) GetVersion() uint32 {
-	return aggregate.version
+	return aggregate.Version
 }
 
 // command is a structured header describing the UUID of a Command instance
@@ -275,7 +275,7 @@ type command struct {
 	aggregate
 	// commandType is an [ application / domain ] unique identifier for the type of
 	// command message which captures the semantic intent of the command
-	commandType uint32 `json:"_ctype"`
+	CommandType uint32 `json:"_ctype"`
 }
 
 // NewCommand creates a command instance with UUID derived from the provided values
@@ -283,19 +283,19 @@ type command struct {
 func NewCommand(application uint32, domain uint32, id uint64, version uint32, commandType uint32) Command {
 	return &command{
 		aggregate: aggregate{
-			application: application,
-			domain:      domain,
-			id:          id,
-			version:     version,
+			Application: application,
+			Domain:      domain,
+			Id:          id,
+			Version:     version,
 		},
-		commandType: commandType,
+		CommandType: commandType,
 	}
 }
 
 // GetCommandType returns the command type of the event that is unique within
 // the [ application / domain ] partition
 func (command *command) GetCommandType() uint32 {
-	return command.commandType
+	return command.CommandType
 }
 
 // event is a structured header describing the UUID of an Event instance
@@ -306,7 +306,7 @@ type event struct {
 	aggregate
 	// eventType is an [ application / domain ] unique identifier for the type of
 	// event message which captures the semantic intent of the event
-	eventType uint32 `json:"_etype"`
+	EventType uint32 `json:"_etype"`
 }
 
 // NewEvent creates an event instance with UUID derived from the provided values
@@ -314,27 +314,27 @@ type event struct {
 func NewEvent(application uint32, domain uint32, id uint64, version uint32, eventType uint32) Event {
 	return &event{
 		aggregate: aggregate{
-			application: application,
-			domain:      domain,
-			id:          id,
-			version:     version,
+			Application: application,
+			Domain:      domain,
+			Id:          id,
+			Version:     version,
 		},
-		eventType: eventType,
+		EventType: eventType,
 	}
 }
 
 // GetEventType returns the event type of the event that is unique within
 // the [ application / domain ] partition
 func (event *event) GetEventType() uint32 {
-	return event.eventType
+	return event.EventType
 }
 
 // AggregateLoader describes a function which takes a slice of events and
 // produces either a valid aggregate or an error
-type AggregateLoader func([]Event)(Aggregate, error)
+type AggregateLoader func([]Event) (Aggregate, error)
 
-// CommandEvaluator describes a function which evaluates a 
-type CommandEvaluator func(AggregateIdGenerater, Aggregate, Command)(Event, error)
+// CommandEvaluator describes a function which evaluates a
+type CommandEvaluator func(AggregateIdGenerater, Aggregate, Command) (Event, error)
 
 // DefaultCommandHandler provides a base implementation for domain specific command
 // handlers to use if they follow a standard execution path
