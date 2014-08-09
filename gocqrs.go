@@ -6,10 +6,6 @@ import (
 )
 
 var (
-	// TODO: Bring these back?
-	//ErrUsedTimestamp  = errors.New("timestamp used")
-	//ErrUsedKey        = errors.New("datastore key used")
-
 	// ErrInvalidApplication is used to inform a consumer when they've
 	// provided an aggregate that doesn't have a valid application id
 	// that the receiving service is able to process
@@ -47,7 +43,7 @@ var (
 	ErrUnableToFindAggregate = errors.New("unable to locate specified aggregate")
 
 	// ErrUnableToLoadAggregate is used to inform a consumer when the
-	// aggregate loaded form the store failed to hydrate properly
+	// aggregate loaded from the store failed to hydrate properly
 	ErrUnableToLoadAggregate = errors.New("error occured loading aggregate")
 
 	// ErrErrorApplyingCommand is used to inform a consumer when the
@@ -82,13 +78,13 @@ func MakeVersionedEventType(version uint8, typeId uint32) uint32 {
 // EventStoreReaderWriter describes a type the can be used to either read
 // or write events to an eventstore
 type EventStoreReaderWriterGenerator interface {
-	AggregateIdGenerater
+	AggregateIdGenerator
 	EventStoreWriter
 	EventStoreReader
 }
 
 // AggregateIdGenerator is responsible for creating valid unique Ids for Aggregates
-type AggregateIdGenerater interface {
+type AggregateIdGenerator interface {
 	//GenerateAggregateId(application uint32, domain uint32) (uint64, error)
 	GenerateAggregateId() (uint64, error)
 }
@@ -334,7 +330,7 @@ func (event *event) GetEventType() uint32 {
 type AggregateLoader func([]Event) (Aggregate, error)
 
 // CommandEvaluator describes a function which evaluates a
-type CommandEvaluator func(AggregateIdGenerater, Aggregate, Command) (Event, error)
+type CommandEvaluator func(AggregateIdGenerator, Aggregate, Command) (Event, error)
 
 // DefaultCommandHandler provides a base implementation for domain specific command
 // handlers to use if they follow a standard execution path
