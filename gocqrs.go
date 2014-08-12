@@ -234,7 +234,7 @@ type aggregate struct {
 
 // NewAggregate creates an aggregate instance with UUId derived from the provided values
 func NewAggregate(application uint32, domain uint32, id uint64, version uint32) Aggregate {
-	return &aggregate{
+	return aggregate{
 		Application: application,
 		Domain:      domain,
 		Id:          id,
@@ -244,18 +244,18 @@ func NewAggregate(application uint32, domain uint32, id uint64, version uint32) 
 
 // GetApplication returns the application id this aggregate
 // was designed within
-func (aggregate *aggregate) GetApplication() uint32 {
+func (aggregate aggregate) GetApplication() uint32 {
 	return aggregate.Application
 }
 
 // GetDomain returns the domain (or aggregate type) of this aggregate
-func (aggregate *aggregate) GetDomain() uint32 {
+func (aggregate aggregate) GetDomain() uint32 {
 	return aggregate.Domain
 }
 
 // GetId returns the id of the aggregate which is unique within the
 // partition provided by the combination of application and domain
-func (aggregate *aggregate) GetId() uint64 {
+func (aggregate aggregate) GetId() uint64 {
 	return aggregate.Id
 }
 
@@ -263,7 +263,7 @@ func (aggregate *aggregate) GetId() uint64 {
 // this aggregate instance.  Not guaranteed to be the current version
 // just the version state of the aggregate when this instance was
 // loaded
-func (aggregate *aggregate) GetVersion() uint32 {
+func (aggregate aggregate) GetVersion() uint32 {
 	return aggregate.Version
 }
 
@@ -281,7 +281,7 @@ type command struct {
 // NewCommand creates a command instance with UUID derived from the provided values
 // including the header of the targeted aggregate instance
 func NewCommand(application uint32, domain uint32, id uint64, version uint32, commandType uint32) Command {
-	return &command{
+	return command{
 		aggregate: aggregate{
 			Application: application,
 			Domain:      domain,
@@ -294,7 +294,7 @@ func NewCommand(application uint32, domain uint32, id uint64, version uint32, co
 
 // GetCommandType returns the command type of the event that is unique within
 // the [ application / domain ] partition
-func (command *command) GetCommandType() uint32 {
+func (command command) GetCommandType() uint32 {
 	return command.CommandType
 }
 
@@ -312,7 +312,7 @@ type event struct {
 // NewEvent creates an event instance with UUID derived from the provided values
 // including the header of the targeted aggregate instance
 func NewEvent(application uint32, domain uint32, id uint64, version uint32, eventType uint32) Event {
-	return &event{
+	return event{
 		aggregate: aggregate{
 			Application: application,
 			Domain:      domain,
@@ -325,7 +325,7 @@ func NewEvent(application uint32, domain uint32, id uint64, version uint32, even
 
 // GetEventType returns the event type of the event that is unique within
 // the [ application / domain ] partition
-func (event *event) GetEventType() uint32 {
+func (event event) GetEventType() uint32 {
 	return event.EventType
 }
 
