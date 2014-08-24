@@ -1,1 +1,0 @@
-curl -X POST -d "{\"__domain\":3908438440, \"__id\":0, \"__version\":0, \"__ctype\":2147549185, \"tag\":\"Tag\"}"  http://localhost:8080/api/v1/snaptags --header "Content-Type:application/json"
