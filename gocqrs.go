@@ -362,3 +362,5 @@ func DefaultCommandHandler(eventStore EventStoreReaderWriterGenerator, publisher
 	}
 	return err
 }
+
+// LoadView calls out to the event store and loads
