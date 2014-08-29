@@ -114,7 +114,7 @@ type Aggregate interface {
 // AggregateHydrator describes a type which processes a slice of events to produce
 // a populated aggregate instance
 type AggregateHydrator interface {
-	LoadAggregate([]event) (Aggregate, error)
+	LoadAggregate([]Event) (Aggregate, error)
 }
 
 // Command provides a base interface for all commands in the
@@ -213,7 +213,7 @@ type TypedEventDeserializer interface {
 }
 
 // aggregate is a structured header describing the UUId of an aggregate instance
-type aggregate struct {
+type AggregateMemento struct {
 	// application the target aggregate belongs to, provides multi-tenancy
 	// at the application level partition for like domains within the same service
 	Application uint32 `json:"_app"`
@@ -229,8 +229,8 @@ type aggregate struct {
 }
 
 // NewAggregate creates an aggregate instance with UUId derived from the provided values
-func NewAggregate(application uint32, domain uint32, id uint64, version uint32) Aggregate {
-	return aggregate{
+func NewAggregate(application uint32, domain uint32, id uint64, version uint32) AggregateMemento {
+	return AggregateMemento{
 		Application: application,
 		Domain:      domain,
 		Id:          id,
@@ -240,18 +240,18 @@ func NewAggregate(application uint32, domain uint32, id uint64, version uint32) 
 
 // GetApplication returns the application id this aggregate
 // was designed within
-func (aggregate aggregate) GetApplication() uint32 {
+func (aggregate AggregateMemento) GetApplication() uint32 {
 	return aggregate.Application
 }
 
 // GetDomain returns the domain (or aggregate type) of this aggregate
-func (aggregate aggregate) GetDomain() uint32 {
+func (aggregate AggregateMemento) GetDomain() uint32 {
 	return aggregate.Domain
 }
 
 // GetId returns the id of the aggregate which is unique within the
 // partition provided by the combination of application and domain
-func (aggregate aggregate) GetId() uint64 {
+func (aggregate AggregateMemento) GetId() uint64 {
 	return aggregate.Id
 }
 
@@ -259,16 +259,16 @@ func (aggregate aggregate) GetId() uint64 {
 // this aggregate instance.  Not guaranteed to be the current version
 // just the version state of the aggregate when this instance was
 // loaded
-func (aggregate aggregate) GetVersion() uint32 {
+func (aggregate AggregateMemento) GetVersion() uint32 {
 	return aggregate.Version
 }
 
 // command is a structured header describing the UUID of a Command instance
-type command struct {
+type CommandMemento struct {
 	// aggregate is the base structure that binds the command instance
 	// to the target aggregate by capturing the aggregate's full UUId
 	// partition information [ application / domain / id / version ]
-	aggregate
+	AggregateMemento
 	// commandType is an [ application / domain ] unique identifier for the type of
 	// command message which captures the semantic intent of the command
 	CommandType uint32 `json:"_ctype"`
@@ -276,9 +276,9 @@ type command struct {
 
 // NewCommand creates a command instance with UUID derived from the provided values
 // including the header of the targeted aggregate instance
-func NewCommand(application uint32, domain uint32, id uint64, version uint32, commandType uint32) Command {
-	return command{
-		aggregate: aggregate{
+func NewCommand(application uint32, domain uint32, id uint64, version uint32, commandType uint32) CommandMemento {
+	return CommandMemento{
+		AggregateMemento: AggregateMemento{
 			Application: application,
 			Domain:      domain,
 			Id:          id,
@@ -290,16 +290,16 @@ func NewCommand(application uint32, domain uint32, id uint64, version uint32, co
 
 // GetCommandType returns the command type of the event that is unique within
 // the [ application / domain ] partition
-func (command command) GetCommandType() uint32 {
+func (command CommandMemento) GetCommandType() uint32 {
 	return command.CommandType
 }
 
 // event is a structured header describing the UUID of an Event instance
-type event struct {
+type EventMemento struct {
 	// aggregate is the base structure that binds the event instance
 	// to the target aggregate by capturing the aggregate's full UUId
 	// partition information [ application / domain / id / version ]
-	aggregate
+	AggregateMemento
 	// eventType is an [ application / domain ] unique identifier for the type of
 	// event message which captures the semantic intent of the event
 	EventType uint32 `json:"_etype"`
@@ -307,9 +307,9 @@ type event struct {
 
 // NewEvent creates an event instance with UUID derived from the provided values
 // including the header of the targeted aggregate instance
-func NewEvent(application uint32, domain uint32, id uint64, version uint32, eventType uint32) Event {
-	return event{
-		aggregate: aggregate{
+func NewEvent(application uint32, domain uint32, id uint64, version uint32, eventType uint32) EventMemento {
+	return EventMemento{
+		AggregateMemento: AggregateMemento{
 			Application: application,
 			Domain:      domain,
 			Id:          id,
@@ -321,7 +321,7 @@ func NewEvent(application uint32, domain uint32, id uint64, version uint32, even
 
 // GetEventType returns the event type of the event that is unique within
 // the [ application / domain ] partition
-func (event event) GetEventType() uint32 {
+func (event EventMemento) GetEventType() uint32 {
 	return event.EventType
 }
 
