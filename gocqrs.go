@@ -100,10 +100,10 @@ type EventStoreReader interface {
 	LoadEventsByAggregate(aggregate uint64) ([]Event, error)
 	LoadEventsByEventType(eventType uint32) ([]Event, error)
 	LoadEventsByEventTypes(eventTypes ...uint32) ([]Event, error)
-	LoadEventsFromTime(timestamp time.Time) (time.Time, []Event, error)
-	LoadEventsByAggregateFromTime(timestamp time.Time, aggregate uint64) (time.Time, []Event, error)
-	LoadEventsByEventTypeFromTime(timestamp time.Time, eventType uint32) (time.Time, []Event, error)
-	LoadEventsByEventTypesFromTime(timestamp time.Time, eventTypes ...uint32) (time.Time, []Event, error)
+	LoadEventsFromOffset(offset int) (time.Time, []Event, error)
+	LoadEventsByAggregateFromOffset(offset int, aggregate uint64) (time.Time, []Event, error)
+	LoadEventsByEventTypeFromOffset(offset int, eventType uint32) (time.Time, []Event, error)
+	LoadEventsByEventTypesFromOffset(offset int, eventTypes ...uint32) (time.Time, []Event, error)
 }
 
 // Aggregate provides a base interface for things that contain
