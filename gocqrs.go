@@ -100,6 +100,10 @@ type EventStoreReader interface {
 	LoadEventsByAggregate(aggregate uint64) ([]Event, error)
 	LoadEventsByEventType(eventType uint32) ([]Event, error)
 	LoadEventsByEventTypes(eventTypes ...uint32) ([]Event, error)
+	LoadEventsFromTime(timestamp time.Time) (time.Time, []Event, error)
+	LoadEventsByAggregateFromTime(timestamp time.Time, aggregate uint64) (time.Time, []Event, error)
+	LoadEventsByEventTypeFromTime(timestamp time.Time, eventType uint32) (time.Time, []Event, error)
+	LoadEventsByEventTypesFromTime(timestamp time.Time, eventTypes ...uint32) (time.Time, []Event, error)
 }
 
 // Aggregate provides a base interface for things that contain
@@ -172,7 +176,7 @@ type Event interface {
 
 // EventPublisher describes a type that can be used to publish events to a bus
 type EventPublisher interface {
-	Publish(Event) error
+	Publish(time.Time, Event) error
 }
 
 // EventHandler describes a type that can be used to process events
@@ -351,12 +355,12 @@ func DefaultCommandHandler(eventStore EventStoreReaderWriterGenerator, publisher
 		return ErrErrorApplyingCommand
 	}
 	// Commit the event to the eventstore
-	_, err = eventStore.AppendEvent(event)
+	timestamp, err := eventStore.AppendEvent(event)
 	if err != nil {
 		return ErrErrorAppendingEvent
 	}
 	// Broadcast the created event to all observers
-	err = publisher.Publish(event)
+	err = publisher.Publish(timestamp, event)
 	if err != nil {
 		return ErrErrorPublishingEvent
 	}
