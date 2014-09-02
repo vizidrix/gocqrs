@@ -2,7 +2,6 @@ package gocqrs
 
 import (
 	"errors"
-	"time"
 )
 
 var (
@@ -91,7 +90,7 @@ type AggregateIdGenerator interface {
 
 // EventWriter is responsible for persisting Events to the EventStore
 type EventStoreWriter interface {
-	AppendEvent(Event) (time.Time, error)
+	AppendEvent(Event) (int64, error)
 }
 
 // Responsible for serving Streams as queries against the EventStore
@@ -100,10 +99,10 @@ type EventStoreReader interface {
 	LoadEventsByAggregate(aggregate uint64) ([]Event, error)
 	LoadEventsByEventType(eventType uint32) ([]Event, error)
 	LoadEventsByEventTypes(eventTypes ...uint32) ([]Event, error)
-	LoadEventsFromOffset(offset int) (time.Time, []Event, error)
-	LoadEventsByAggregateFromOffset(offset int, aggregate uint64) (time.Time, []Event, error)
-	LoadEventsByEventTypeFromOffset(offset int, eventType uint32) (time.Time, []Event, error)
-	LoadEventsByEventTypesFromOffset(offset int, eventTypes ...uint32) (time.Time, []Event, error)
+	LoadEventsFromTimestamp(timestamp int64) (int64, []Event, error)
+	LoadEventsByAggregateFromTimestamp(timestamp int64, aggregate uint64) (int64, []Event, error)
+	LoadEventsByEventTypeFromTimestamp(timestamp int64, eventType uint32) (int64, []Event, error)
+	LoadEventsByEventTypesFromTimestamp(timestamp int64, eventTypes ...uint32) (int64, []Event, error)
 }
 
 // Aggregate provides a base interface for things that contain
@@ -176,12 +175,12 @@ type Event interface {
 
 // EventPublisher describes a type that can be used to publish events to a bus
 type EventPublisher interface {
-	Publish(time.Time, Event) error
+	Publish(int64, Event) error
 }
 
 // EventHandler describes a type that can be used to process events
 type EventHandler interface {
-	Handle(event Event) (time.Time, error)
+	Handle(event Event) (int64, error)
 }
 
 // EventSerializerDeSerializer  describes a type that can be used to
