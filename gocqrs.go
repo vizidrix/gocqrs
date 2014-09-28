@@ -60,6 +60,11 @@ var (
 	ErrErrorPublishingEvent = errors.New("error publishing the event")
 )
 
+// NoOrigin is the default value to use for origin commands which were not
+// a result of a previous event.  Used to specify no causation or initial action.
+const NoOrigin = NewAggregate(0, 0, 0, 0)
+
+// TypeBuilder describes a function that can be used to produce a type id
 type TypeBuilder func(uint8, uint32) uint32
 
 // MakeVersionedCommandType provides a utility to union a command's version and
@@ -74,8 +79,8 @@ func MakeVersionedEventType(version uint8, typeId uint32) uint32 {
 	return 0x7FFFFFFF&(uint32(version)<<24&0x7F000000) | (typeId & 0xFFFFFF)
 }
 
-// EventStoreReaderWriter describes a type the can be used to either read
-// or write events to an eventstore
+// EventStoreReaderWriterGenerator describes a type the can be used to either
+// read or write events to an eventstore or generate a safe uuid
 type EventStoreReaderWriterGenerator interface {
 	AggregateIdGenerator
 	EventStoreWriter
@@ -93,7 +98,7 @@ type EventStoreWriter interface {
 	AppendEvent(Event) (int64, error)
 }
 
-// Responsible for serving Streams as queries against the EventStore
+// EventStoreReader is responsible for serving Streams as queries against the EventStore
 type EventStoreReader interface {
 	LoadEvents() ([]Event, error)
 	LoadEventsByAggregate(aggregate uint64) ([]Event, error)
@@ -126,6 +131,7 @@ type AggregateHydrator interface {
 type Command interface {
 	Aggregate
 	GetCommandType() uint32
+	GetOrigin() Aggregate
 }
 
 // CommandHandler describes a type that can be used to process commands
@@ -171,6 +177,7 @@ type TypedCommandDeserializer interface {
 type Event interface {
 	Aggregate
 	GetEventType() uint32
+	GetOrigin() Aggregate
 }
 
 // EventPublisher describes a type that can be used to publish events to a bus
@@ -215,7 +222,7 @@ type TypedEventDeserializer interface {
 	Deserialize(uint32, []byte) (Event, error)
 }
 
-// aggregate is a structured header describing the UUId of an aggregate instance
+// AggregateMemento is a structured header describing the UUId of an aggregate instance
 type AggregateMemento struct {
 	// application the target aggregate belongs to, provides multi-tenancy
 	// at the application level partition for like domains within the same service
@@ -266,12 +273,14 @@ func (aggregate AggregateMemento) GetVersion() uint32 {
 	return aggregate.Version
 }
 
-// command is a structured header describing the UUID of a Command instance
+// CommandMemento is a structured header describing the UUID of a Command instance
 type CommandMemento struct {
 	// aggregate is the base structure that binds the command instance
 	// to the target aggregate by capturing the aggregate's full UUId
 	// partition information [ application / domain / id / version ]
 	AggregateMemento
+	// origin is the correlary structure that links a command to its legacy
+	Origin AggregateMemento
 	// commandType is an [ application / domain ] unique identifier for the type of
 	// command message which captures the semantic intent of the command
 	CommandType uint32 `json:"_ctype"`
@@ -279,13 +288,19 @@ type CommandMemento struct {
 
 // NewCommand creates a command instance with UUID derived from the provided values
 // including the header of the targeted aggregate instance
-func NewCommand(application uint32, domain uint32, id uint64, version uint32, commandType uint32) CommandMemento {
+func NewCommand(application uint32, domain uint32, id uint64, version uint32, commandType uint32, origin Aggregate) CommandMemento {
 	return CommandMemento{
 		AggregateMemento: AggregateMemento{
 			Application: application,
 			Domain:      domain,
 			Id:          id,
 			Version:     version,
+		},
+		Origin: AggregateMemento{
+			Application: origin.GetApplication(),
+			Domain:      origin.GetDomain(),
+			Id:          origin.GetId(),
+			Version:     origin.GetVersion(),
 		},
 		CommandType: commandType,
 	}
@@ -297,12 +312,14 @@ func (command CommandMemento) GetCommandType() uint32 {
 	return command.CommandType
 }
 
-// event is a structured header describing the UUID of an Event instance
+// EventMemento is a structured header describing the UUID of an Event instance
 type EventMemento struct {
 	// aggregate is the base structure that binds the event instance
 	// to the target aggregate by capturing the aggregate's full UUId
 	// partition information [ application / domain / id / version ]
 	AggregateMemento
+	// origin is the correlary structure that links a command to its legacy
+	Origin AggregateMemento
 	// eventType is an [ application / domain ] unique identifier for the type of
 	// event message which captures the semantic intent of the event
 	EventType uint32 `json:"_etype"`
@@ -310,13 +327,19 @@ type EventMemento struct {
 
 // NewEvent creates an event instance with UUID derived from the provided values
 // including the header of the targeted aggregate instance
-func NewEvent(application uint32, domain uint32, id uint64, version uint32, eventType uint32) EventMemento {
+func NewEvent(application uint32, domain uint32, id uint64, version uint32, eventType uint32, origin Aggregate) EventMemento {
 	return EventMemento{
 		AggregateMemento: AggregateMemento{
 			Application: application,
 			Domain:      domain,
 			Id:          id,
 			Version:     version,
+		},
+		Origin: AggregateMemento{
+			Application: origin.GetApplication(),
+			Domain:      origin.GetDomain(),
+			Id:          origin.GetId(),
+			Version:     origin.GetVersion(),
 		},
 		EventType: eventType,
 	}
@@ -365,5 +388,3 @@ func DefaultCommandHandler(eventStore EventStoreReaderWriterGenerator, publisher
 	}
 	return err
 }
-
-// LoadView calls out to the event store and loads
