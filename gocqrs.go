@@ -63,7 +63,7 @@ var (
 
 // NoOrigin is the default value to use for origin commands which were not
 // a result of a previous event.  Used to specify no causation or initial action.
-const NoOrigin = NewAggregate(0, 0, 0, 0)
+var NoOrigin = NewAggregate(0, 0, 0, 0)
 
 // TypeBuilder describes a function that can be used to produce a type id
 type TypeBuilder func(uint8, uint32) uint32
