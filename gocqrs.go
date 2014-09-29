@@ -2,6 +2,7 @@ package gocqrs
 
 import (
 	"errors"
+	"fmt"
 )
 
 var (
@@ -117,6 +118,7 @@ type Aggregate interface {
 	GetDomain() uint32
 	GetId() uint64
 	GetVersion() uint32
+	String() string
 }
 
 // AggregateHydrator describes a type which processes a slice of events to produce
@@ -273,6 +275,11 @@ func (aggregate AggregateMemento) GetVersion() uint32 {
 	return aggregate.Version
 }
 
+// String returns the string representation of the aggregate
+func (aggregate AggregateMemento) String() string {
+	return fmt.Sprintf("%d%d%d%d", aggregate.Application, aggregate.Domain, aggregate.Id, aggregate.Version)
+}
+
 // CommandMemento is a structured header describing the UUID of a Command instance
 type CommandMemento struct {
 	// aggregate is the base structure that binds the command instance
@@ -312,6 +319,10 @@ func (command CommandMemento) GetCommandType() uint32 {
 	return command.CommandType
 }
 
+func (command CommandMemento) GetOrigin() Aggregate {
+	return command.Origin
+}
+
 // EventMemento is a structured header describing the UUID of an Event instance
 type EventMemento struct {
 	// aggregate is the base structure that binds the event instance
@@ -349,6 +360,10 @@ func NewEvent(application uint32, domain uint32, id uint64, version uint32, even
 // the [ application / domain ] partition
 func (event EventMemento) GetEventType() uint32 {
 	return event.EventType
+}
+
+func (event EventMemento) GetOrigin() Aggregate {
+	return event.Origin
 }
 
 // AggregateLoader describes a function which takes a slice of events and
