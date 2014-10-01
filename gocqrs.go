@@ -65,6 +65,11 @@ var (
 // a result of a previous event.  Used to specify no causation or initial action.
 var NoOrigin = NewAggregate(0, 0, 0, 0)
 
+// NoVersionControl is the default value to use for the version of commands
+// whose handler does not evaluate the version of the aggregate to determine
+// the validity of a command
+const NoVersionControl uint32 = 0
+
 // TypeBuilder describes a function that can be used to produce a type id
 type TypeBuilder func(uint8, uint32) uint32
 
